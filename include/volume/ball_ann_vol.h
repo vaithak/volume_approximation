@@ -68,9 +68,10 @@ NT volesti_ball_ann(Polytope &P, std::pair<Point,NT> &InnerBall, NT &lb, NT &up,
         nu=10;
     }
 
+    std::vector<std::vector<NT> > all_ratios;
     get_sequence_of_zonoballs<ZonoBall, RNGType>(P, BallSet, B0, ratio0, PointSets,
                                                  ratios, Ns, nu, lb, up, radius, var,
-                                                 ballsteps, steps, B0_radius, rmax);
+                                                 ballsteps, steps, all_ratios, B0_radius, rmax);
     //var.coordinate = true;
     if(steps_only) {
         return NT(BallSet.size()+1);
