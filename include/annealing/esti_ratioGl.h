@@ -8,6 +8,7 @@
 #define ESTI_RATIOGL_H
 
 #include <numeric>
+#include <boost/math/distributions/students_t.hpp>
 
 template <class ZonoBall, class ball, typename NT, class Parameters>
 NT esti_ratio(ZonoBall &Zb, ball B0, NT ratio, NT error, int Win, Parameters &var, NT &steps) {
@@ -222,6 +223,7 @@ NT esti_ratio2(ball B0, Zonotope &Z, NT error, int Win, NT ratio, NT &steps) {
             //std::cout<<"last ball rejection ratio = "<<val<< " | total points = "<<totCount<<std::endl;
             done=true;
             steps = (totCount - 1200.0);
+            std::cout<<"COUNT IN Cm = "<<steps<<std::endl;
             return val;
         }
 
@@ -237,11 +239,11 @@ template <typename NT>
 bool check_max_error123(NT a, NT b, NT val, NT error) {
 
     NT e1 = std::abs(a - val) / a;
-    NT e2 = std::abs(b - val) / b;
-    NT e3 = (b-a)/b;
+    //NT e2 = std::abs(b - val) / b;
+    //NT e3 = (b-a)/b;
     //std::cout<<"er1 = "<<e1<<" er2 = "<<e2<<"e3 = "<<e3<<" error = "<<error/10.0<<std::endl;
     //if (e1<error/2.0 && e2<error/2.0){
-    if(e3<error/2.0) {
+    if(e1<error/2.0) {
         return true;
     }
     return false;
@@ -513,11 +515,72 @@ NT esti_ratio2_const(ball B0, Zonotope &Z, NT error, int WW, NT ratio, NT prob, 
             //std::cout<<"final rejection to Z ratio = "<<val<< " | total points = "<<totCount<<std::endl;
             done=true;
             steps = (totCount - 1200.0);
+            std::cout<<"COUNT IN Cm = "<<steps<<std::endl;
             return val;
         }
 
     }
     return val;
+}
+
+
+template <class RNGType, class Zonotope, class ball, typename NT>
+NT esti_ball_ratio_no_W(ball B0, Zonotope &Z, NT error, std::vector<NT> all_ratios,
+                     NT ratio, NT prob, NT &steps, int N) {
+
+    N=120;
+    NT mean = ratio, s, zp, M2 = 0, variance = 0, delta, pr = (1.0 + prob) / 2.0, rad = B0.radius(), count_in,
+            tot_in = NT(N), alpha = 1.0-prob, T;
+    typedef typename Zonotope::PolytopePoint Point;
+    int n = Z.dimension(), nu = 0;
+    Point p(n);
+    zp = std::sqrt(2.0)*boost::math::erf_inv(2.0*pr - 1.0);
+    //std::pair<NT,NT> mv = getMeanVariance(all_ratios);
+
+    typedef typename std::vector<NT>::iterator viterator;
+    viterator vecit = all_ratios.begin();
+    for( ; vecit!=all_ratios.end(); vecit++, nu++){
+        std::cout<<*vecit<<" "<<std::endl;
+        delta = *vecit - mean;
+        mean += delta / (nu + 1);
+        M2 += delta * (*vecit - mean);
+        variance = M2 / (nu + 1);
+    }
+    std::cout<<"\nmean = "<<mean<<" ratio = "<<ratio<<" std = "<<std::sqrt(variance)
+             <<" nu = "<<nu<<" N = "<<N<<" zp = "<<zp<<" error = "<<error
+             <<" er ="<<(zp*std::sqrt(variance))/(mean - zp*std::sqrt(variance))<<std::endl;
+
+    int count = 0;
+    while(true){
+
+        count_in = 0.0;
+        for (int i = 0; i < N; ++i) {
+            count++;
+            p = get_point_in_Dsphere<RNGType, Point>(n, rad);
+            if (Z.is_in(p)==-1) {
+                count_in = count_in + 1.0;
+            }
+        }
+        delta = count_in/tot_in - mean;
+        mean += delta / (nu + 1);
+        M2 += delta * (count_in/tot_in - mean);
+        variance = M2 / (nu + 1);
+        nu++;
+        s = std::sqrt(variance);
+
+        boost::math::students_t dist(nu - 1);
+        T = boost::math::quantile(boost::math::complement(dist, alpha / 2.0))/std::sqrt(NT(nu));
+
+        //std::cout<<"ratio = "<<count_in/tot_in<<" mean = "<<mean<<" std = "<<s
+               //  <<" er = "<<(T*s)/(mean - T*s)<<std::endl;
+
+        if ((T*s)/(mean - T*s) <= error) {
+            std::cout<<"COUNT IN Cm = "<<count<<" nu = "<<nu<<std::endl;
+            return mean;
+        }
+
+    }
+
 }
 
 
