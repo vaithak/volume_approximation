@@ -101,9 +101,9 @@ NT volesti_ball_ann(Polytope &P, std::pair<Point,NT> &InnerBall, NT &lb, NT &up,
     int WW = 4*n*n+500;
     //Win0 = int(std::min( (1.0/(1.0-std::pow(0.75,1.0/NT(mm)))) * (2.25*((1.0/er0)*(1.0/er0))), 4.0*NT(n*n)+500.0 ) );
     if(const_win){
-        vol = vol * esti_ball_ratio_no_W<RNGType>(B0, P, er0, all_ratios[0],
-                ratio0, prob, steps, Ns/10);
-        //vol = vol * esti_ratio2_const<RNGType>(B0, P, er0, Win_len, ratio0, prob, steps);
+        //vol = vol * esti_ball_ratio_no_W<RNGType>(B0, P, er0, all_ratios[0],
+                //ratio0, prob, steps, Ns/10);
+        vol = vol * esti_ratio2_const<RNGType>(B0, P, er0, Win_len, ratio0, prob, steps);
     } else {
         vol = vol * esti_ratio2<RNGType>(B0, P, er0, WW, ratio0, steps);
     }

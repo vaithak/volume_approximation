@@ -223,7 +223,7 @@ NT esti_ratio2(ball B0, Zonotope &Z, NT error, int Win, NT ratio, NT &steps) {
             //std::cout<<"last ball rejection ratio = "<<val<< " | total points = "<<totCount<<std::endl;
             done=true;
             steps = (totCount - 1200.0);
-            std::cout<<"COUNT IN Cm = "<<steps<<std::endl;
+            //std::cout<<"COUNT IN Cm = "<<steps<<std::endl;
             return val;
         }
 
@@ -515,7 +515,7 @@ NT esti_ratio2_const(ball B0, Zonotope &Z, NT error, int WW, NT ratio, NT prob, 
             //std::cout<<"final rejection to Z ratio = "<<val<< " | total points = "<<totCount<<std::endl;
             done=true;
             steps = (totCount - 1200.0);
-            std::cout<<"COUNT IN Cm = "<<steps<<std::endl;
+            //std::cout<<"COUNT IN Cm = "<<steps<<std::endl;
             return val;
         }
 
