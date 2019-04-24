@@ -1,4 +1,4 @@
-## Practical volume computation, supplementary code for paper "Practical volume estimation by a new annealing schedule for cooling convex bodies" submitted to SoCG 2019
+## Practical volume computation, supplementary code for paper "Practical volume estimation by a new annealing schedule for cooling convex bodies" submitted to ESA 2019
 
 #### 0. Compile code
 - Clone repository and switch to branch v_poly:  
