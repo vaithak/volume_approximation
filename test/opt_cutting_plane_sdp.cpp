@@ -122,8 +122,14 @@ int main(const int argc, const char **argv) {
             user_walk_len = true;
             correct = true;
         }
+
         if (!strcmp(argv[i], "-covariance")) {
             algorithm = sdp_problem::Algorithm::RANDOMIZED_CUTTING_PLANE_COVARIANCE_MATRIX;
+            correct = true;
+        }
+
+        if (!strcmp(argv[i], "-billiard")) {
+            algorithm = sdp_problem::Algorithm::RANDOMIZED_CUTTING_PLANE_BILLIARD;
             correct = true;
         }
 

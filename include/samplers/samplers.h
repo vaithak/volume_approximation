@@ -407,7 +407,7 @@ void hit_and_run(Point& point,
     Point l = get_direction<RNGType, Point, double>(n);
     VT pointVT = point.getCoefficients();
     VT lVT = l.getCoefficients();
-    std::pair <double, double> dbpair = spectrahedron.boundaryOracle(pointVT, lVT, a, b);
+    std::pair <double, double> dbpair = spectrahedron.boundaryOracleEfficient(pointVT, lVT, a, b);
     double min_plus = dbpair.first;
     double max_minus = dbpair.second;
     Point b1 = (min_plus * l) + point;
@@ -434,7 +434,7 @@ void hit_and_run_sampled_covariance_matrix(Point& point,
     VT lVT = l.getCoefficients();
     lVT = covarianceMatrix * lVT;
     l = Point(lVT);
-    std::pair <double, double> dbpair = spectrahedron.boundaryOracle(pointVT, lVT, a, b);
+    std::pair <double, double> dbpair = spectrahedron.boundaryOracleEfficient(pointVT, lVT, a, b);
     double min_plus = dbpair.first;
     double max_minus = dbpair.second;
     Point b1 = (min_plus * l) + point;
@@ -510,7 +510,7 @@ void hit_and_run(Point& point,
     Point l = get_direction<RNGType, Point, double>(n);
     VT pointVT = point.getCoefficients();
     VT lVT = l.getCoefficients();
-    std::pair <double, double> dbpair = spectrahedron.boundaryOracle(pointVT, lVT, a, b);
+    std::pair <double, double> dbpair = spectrahedron.boundaryOracleEfficient(pointVT, lVT, a, b);
     double min_plus = dbpair.first;
     double max_minus = dbpair.second;
     b1 = (min_plus * l) + point;
@@ -539,7 +539,7 @@ void hit_and_run_sampled_covariance_matrix(Point& point,
     VT lVT = l.getCoefficients();
     lVT = covarianceMatrix * lVT;
     l = Point(lVT);
-    std::pair <double, double> dbpair = spectrahedron.boundaryOracle(pointVT, lVT, a, b);
+    std::pair <double, double> dbpair = spectrahedron.boundaryOracleEfficient(pointVT, lVT, a, b);
     double min_plus = dbpair.first;
     double max_minus = dbpair.second;
     b1 = (min_plus * l) + point;
@@ -755,6 +755,98 @@ void billiard_walk(ConvexBody &P, Point &p, NT che_rad, std::vector<NT> &Ar, std
         //throw "Point out!";
 //        p=p0;
 //    }
+}
+
+
+template <class Point, class Parameters, typename NT>
+void billiard_walk(Spectrahedron &spectrahedron, Point &p, NT che_rad, MT& LMIatP, Parameters &var, const VT& a, double b, bool first = true) {
+
+    typedef typename Parameters::RNGType RNGType;
+    unsigned int n = spectrahedron.getLMI().getDim();
+    RNGType &rng = var.rng;
+    boost::random::uniform_real_distribution<> urdist(0, 1);
+    NT T = urdist(rng) * che_rad;
+    VT v = get_direction<RNGType, Point, NT>(n).getCoefficients();
+    int it = 0;
+    std::pair<double, bool> pair;
+    NT lambda_max = 0.0;
+    MT B;
+    VT genEivector;
+    VT pVT = p.getCoefficients();
+
+//    std::pair<double, double> bpair;
+
+if (first) {
+
+        pair = spectrahedron.boundaryOraclePositive(pVT, v, a, b, LMIatP, B, genEivector, true);
+//        bpair = spectrahedron.boundaryOracleEfficient(pVT, v, a, b);
+        double lambda = pair.first;
+        MT C = LMIatP + (lambda*B);
+
+//        std::cout<<pair.first << " vs " << bpair.first<<std::endl;
+        lambda = 0.995 * lambda;
+        if (lambda == 0)
+            return;
+
+        if (T <= lambda) {
+            pVT = (T * v) + pVT;
+            p = Point(pVT);
+            LMIatP += T*B;
+//            std::cout<< " =========\n\n\n\n\n\n" <<std::endl;
+            return;
+        }
+
+        pVT = (lambda * v) + pVT;
+        LMIatP += lambda*B;
+        T -= lambda;
+
+        if (pair.second) {
+            //we hit the cutting plane
+            VT reflection = ((-2.0 * v.dot(a)) * a);
+            v += reflection;
+        }
+        else
+            spectrahedron.compute_reflection(genEivector, v, C);
+
+
+    }
+
+    while (it < 3 * n) {
+
+        pair = spectrahedron.boundaryOraclePositive(pVT, v, a, b, LMIatP, B, genEivector, false);
+//        bpair = spectrahedron.boundaryOracleEfficient(pVT, v, a, b);
+        double lambda = pair.first;
+        MT C = LMIatP + (lambda*B);
+//        std::cout<<pair.first << " vs " << bpair.first << " reflections" <<std::endl;
+        lambda = 0.995 * lambda;
+        if (lambda == 0) {
+            p = Point(pVT);
+            return;
+        }
+
+        if (T <= lambda) {
+            pVT = (T * v) + pVT;
+            LMIatP += T*B;
+            break;
+        }
+
+        pVT = (lambda * v) + pVT;
+        LMIatP += lambda*B;
+        T -= lambda;
+
+        if (pair.second) {
+            //we hit the cutting plane
+            VT reflection = ((-2.0 * v.dot(a)) * a);
+            v += reflection;
+        }
+        else
+            spectrahedron.compute_reflection(genEivector, v, C);
+
+        it++;
+    }
+
+//    std::cout<< " =========\n\n\n\n\n\n" <<std::endl;
+    p = Point(pVT);
 }
 
 

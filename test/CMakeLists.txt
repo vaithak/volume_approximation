@@ -28,6 +28,7 @@ else ()
   set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 
   include_directories (BEFORE ../external/Eigen)
+  include_directories (BEFORE ../external/Spectra)
   include_directories (BEFORE ../external)
   include_directories (BEFORE ../external/minimum_ellipsoid)
   include_directories (BEFORE ../external/unsupported)

@@ -6,6 +6,9 @@
 #define VOLESTI_SPECTRAHEDRON_H
 
 #include "Eigen"
+#include <Spectra/SymGEigsSolver.h>
+#include <Spectra/MatOp/DenseSymMatProd.h>
+#include <Spectra/MatOp/SparseCholesky.h>
 #include <vector>
 #include <Eigen/Eigen>
 #include <limits>
@@ -86,7 +89,7 @@ public:
         return false;
     }
 
-    bool isNegativeDefinite(VT& x) {
+    bool isNegativeDefinite(const VT& x) {
         MT mt = evaluate(x);
 
         Eigen::EigenSolver<MT> solver;
@@ -100,7 +103,7 @@ public:
         return true;
     }
 
-    bool isNegativeSemidefinite(VT& x) {
+    bool isNegativeSemidefinite(const VT& x) {
         MT mt = evaluate(x);
 
         Eigen::EigenSolver<MT> solver;
@@ -188,7 +191,7 @@ public:
     }
 
 
-    int getDim() {
+    int getDim() const {
         return matrices.size();
     }
 
@@ -277,6 +280,8 @@ public:
         return lmi;
     }
 
+
+
     /**
      * Compute the intersection of a 1D line and the spectrahedron by finding the
      * generalized eigenvalues of (LMI(x), A0 - LMI(direction))
@@ -316,6 +321,60 @@ public:
 //        if (lambdaMaxNegative > -ZERO) lambdaMaxNegative = 0;
         if (lambdaMinPositive ==  maxDouble) lambdaMinPositive = 0; //TODO b must be too small..
         if (lambdaMaxNegative == minDouble) lambdaMaxNegative = 0;
+
+        return {lambdaMinPositive, lambdaMaxNegative};
+    }
+
+    /**
+    * Compute the intersection of a 1D line and the spectrahedron by finding the
+    * generalized eigenvalues of (LMI(x), A0 - LMI(direction))
+    *
+    * Take also in account the halfspace ax<=b
+     *
+    * @param position
+    * @param direction
+    * @return (minimum positive eigenvalue, maximum negative eigenvalue)
+    */
+    std::pair<double, double> boundaryOracleEfficient(const VT& position, const VT& direction, const VT& a, double b) {
+        MT A = lmi.evaluate(position);
+        MT B = -lmi.evaluateWithoutA0(direction);
+
+        // Construct matrix operation object using the wrapper classes
+        Spectra::DenseSymMatProd<double> op(B);
+        Spectra::DenseCholesky<double>  Bop(-A);
+
+        // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
+        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
+                geigs(&op, &Bop, 2, 4);
+
+        // Initialize and compute
+        geigs.init();
+        int nconv = geigs.compute();
+        // Retrieve results
+        Eigen::VectorXd evalues;
+//        Eigen::MatrixXd evecs;
+        if(geigs.info() == Spectra::SUCCESSFUL)
+        {
+            evalues = geigs.eigenvalues();
+//            evecs = geigs.eigenvectors();
+        }
+
+        double lambdaMaxNegative;
+        double lambdaMinPositive;
+
+        if (nconv == 2) {
+            lambdaMaxNegative = - 1/evalues(0);
+            lambdaMinPositive = -1/evalues(1);
+        } else {
+            lambdaMaxNegative = lambdaMinPositive = 0;
+        }
+
+        // check the cutting plane
+        double lambda = (b - a.dot(position)) / a.dot(direction);
+        if (lambda > 0 && lambda < lambdaMinPositive)
+            lambdaMinPositive = lambda;
+        if (lambda < 0 && lambda > lambdaMaxNegative)
+            lambdaMaxNegative = lambda;
 
         return {lambdaMinPositive, lambdaMaxNegative};
     }
@@ -388,6 +447,83 @@ public:
 
     bool isSingular(VT& x, double approx) {
         return lmi.isSingular(x, approx);
+    }
+
+    std::pair<double, bool> boundaryOraclePositive(const VT& position, const VT& direction, const VT& a, double b, MT& LMIatP, MT& B, VT& genEivector, bool first = true) {
+        if (first)
+            LMIatP = lmi.evaluate(position);
+
+//        if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
+
+        B = -lmi.evaluateWithoutA0(direction);
+
+        // Construct matrix operation object using the wrapper classes
+        Spectra::SparseSymMatProd<double> op(B);
+        Spectra::DenseCholesky<double>  Bop(-LMIatP);
+
+        // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
+        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
+                geigs(&op, &Bop, 2, 4);
+
+        // Initialize and compute
+        geigs.init();
+        int nconv = geigs.compute();
+        // Retrieve results
+        Eigen::VectorXd evalues;
+        Eigen::MatrixXd evecs;
+        if(geigs.info() == Spectra::SUCCESSFUL)
+        {
+            evalues = geigs.eigenvalues();
+            evecs = geigs.eigenvectors();
+        }
+
+        double lambdaMinPositive;
+
+        if (nconv == 2) {
+            lambdaMinPositive = -1/evalues(1);
+            genEivector = evecs.col(1);
+        } else {
+            lambdaMinPositive = 0;
+        }
+
+        // check the cutting plane
+        bool hitCuttingPlane = false;
+        double lambda = (b - a.dot(position)) / a.dot(direction);
+
+        if (lambda > 0 && lambda < lambdaMinPositive) {
+            lambdaMinPositive = lambda;
+            hitCuttingPlane = true;
+        }
+        B = -B;
+        return {lambdaMinPositive, hitCuttingPlane};
+    }
+
+    void compute_reflection(const VT& genEivector, VT& direction, MT& C) {
+        VT gradient;
+        std::vector<MT> matrices = lmi.getMatrices();
+        int dim = matrices.size();
+        gradient = VT::Zero(dim);
+
+        for (int i=0 ; i<dim ; i++) {
+            gradient(i) = genEivector.dot(matrices[i]* genEivector);
+        }
+
+//        Eigen::SelfAdjointEigenSolver<MT> es;
+//        es.compute(C);
+//        double product = 1;
+//        VT evecs = es.eigenvalues();
+//        for (int i=0 ; i<evecs.rows() ; i++) {
+//            if (evecs(i)!= 0)
+//                product *= evecs(i);
+//        }
+//        std::cout << evecs.transpose() << "h\n";
+//        gradient *= product;
+
+//        gradient = -gradient;
+        gradient.normalize();
+
+        gradient = ((-2.0 * direction.dot(gradient)) * gradient);
+        direction += gradient;
     }
 };
 

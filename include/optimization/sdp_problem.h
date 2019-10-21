@@ -154,6 +154,7 @@ namespace optimization {
         typedef enum Algorithm{
             RANDOMIZED_CUTTING_PLANE,
             RANDOMIZED_CUTTING_PLANE_COVARIANCE_MATRIX,
+            RANDOMIZED_CUTTING_PLANE_BILLIARD,
             SIMULATED_ANNEALING_EFICIENT_COVARIANCE,
         } Algorithm;
 
@@ -256,6 +257,9 @@ namespace optimization {
             switch (algorithm) {
                 case RANDOMIZED_CUTTING_PLANE:
                     solution = cutting_plane_method(spectrahedron, objectiveFunction, parameters, error, maxSteps, initial);
+                    break;
+                case RANDOMIZED_CUTTING_PLANE_BILLIARD:
+                    solution = cutting_plane_method_billiard(spectrahedron, objectiveFunction, parameters, error, maxSteps, initial);
                     break;
                 case RANDOMIZED_CUTTING_PLANE_COVARIANCE_MATRIX:
                     solution = cutting_plane_method_sampled_covariance_matrix(spectrahedron, objectiveFunction, parameters, error, maxSteps, initial);
