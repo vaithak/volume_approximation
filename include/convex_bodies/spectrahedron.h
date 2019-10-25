@@ -458,7 +458,7 @@ public:
         B = -lmi.evaluateWithoutA0(direction);
 
         // Construct matrix operation object using the wrapper classes
-        Spectra::SparseSymMatProd<double> op(B);
+        Spectra::DenseSymMatProd<double> op(B);
         Spectra::DenseCholesky<double>  Bop(-LMIatP);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
