@@ -17,7 +17,7 @@ const double ZERO = 0.0000000001;
 
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> MT;
 typedef Eigen::Matrix<double, Eigen::Dynamic, 1> VT;
-
+typedef Eigen::SparseMatrix<double> SpMat;
 
 /**
  * A linear matrix inequality A_0 + sum(x * F_i)
@@ -195,6 +195,10 @@ public:
         return matrices.size();
     }
 
+    int getMatricesDim() const {
+        return A0.rows();
+    }
+
     const std::vector<MT>& getMatrices() const {
         return matrices;
     }
@@ -345,7 +349,7 @@ public:
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
         Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
-                geigs(&op, &Bop, 2, 4);
+                geigs(&op, &Bop, 2, 3);
 
         // Initialize and compute
         geigs.init();
@@ -463,7 +467,7 @@ public:
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
         Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
-                geigs(&op, &Bop, 2, 4);
+                geigs(&op, &Bop, 2, 3);
 
         // Initialize and compute
         geigs.init();
@@ -498,6 +502,69 @@ public:
         return {lambdaMinPositive, hitCuttingPlane};
     }
 
+    double boundaryOracle_Boltzmann_HMC(const VT& position, const VT& direction, const VT& objectiveFunction, const double& temp,
+            MT& B0, MT& B1, MT& B2, VT& genEivector, bool first = true) {
+
+        unsigned int matrixDim= lmi.getMatricesDim();
+        if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
+
+        if (first) {
+            B0 = lmi.evaluate(position);
+            B2 = lmi.evaluateWithoutA0(objectiveFunction);
+        }
+
+        B1 = lmi.evaluateWithoutA0(direction);
+        MT B2temp = B2 / (-2*temp);
+
+        // create pencil matrix
+        MT AA(2*matrixDim, 2*matrixDim);
+        MT BB(2*matrixDim, 2*matrixDim);
+
+        BB.block(matrixDim, matrixDim, matrixDim, matrixDim) = B0;
+        BB.block(0, matrixDim, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
+        BB.block(matrixDim, 0, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
+        BB.block(0, 0, matrixDim, matrixDim) = -B2temp;
+
+        AA.block(0, matrixDim, matrixDim, matrixDim) = B2temp;
+        AA.block(0, 0, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
+        AA.block(matrixDim, 0, matrixDim, matrixDim) = B2temp;
+        AA.block(matrixDim, matrixDim, matrixDim, matrixDim) = B1;
+
+        SpMat A =AA.sparseView();
+        SpMat B=BB.sparseView();
+
+        // Construct matrix operation object using the wrapper classes
+        Spectra::SparseSymMatProd<double> op(A);
+        Spectra::SparseRegularInverse<double> Bop(B);
+
+        // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
+        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::SparseSymMatProd<double>, Spectra::SparseRegularInverse<double>, Spectra::GEIGS_REGULAR_INVERSE>
+                geigs(&op, &Bop, 1, 3);
+
+        // Initialize and compute
+        geigs.init();
+        int nconv = geigs.compute();
+        // Retrieve results
+        Eigen::VectorXd evalues;
+        Eigen::MatrixXd evecs;
+        if(geigs.info() == Spectra::SUCCESSFUL)
+        {
+            evalues = geigs.eigenvalues();
+            evecs = geigs.eigenvectors();
+        }
+
+        double lambdaMinPositive;
+
+        if (nconv == 1) {
+            lambdaMinPositive = evalues(0);
+            genEivector = evecs.col(0);
+        } else {
+            lambdaMinPositive = 0;
+        }
+
+        return lambdaMinPositive;
+    }
+
     void compute_reflection(const VT& genEivector, VT& direction, MT& C) {
         VT gradient;
         std::vector<MT> matrices = lmi.getMatrices();
@@ -508,18 +575,22 @@ public:
             gradient(i) = genEivector.dot(matrices[i]* genEivector);
         }
 
-//        Eigen::SelfAdjointEigenSolver<MT> es;
-//        es.compute(C);
-//        double product = 1;
-//        VT evecs = es.eigenvalues();
-//        for (int i=0 ; i<evecs.rows() ; i++) {
-//            if (evecs(i)!= 0)
-//                product *= evecs(i);
-//        }
-//        std::cout << evecs.transpose() << "h\n";
-//        gradient *= product;
+        Eigen::SelfAdjointEigenSolver<MT> es;
+        es.compute(C);
+        double product = 1;
+        VT evecs = es.eigenvalues();
+        for (int i=0 ; i<evecs.rows() ; i++) {
+            if (evecs(i)!= 0)
+                product *= evecs(i);
+        }
 
-//        gradient = -gradient;
+        Eigen::FullPivLU<MT> lu_decomp(C);
+        auto rank = lu_decomp.rank();
+
+        std::cout << rank << "\n";
+        gradient *= product;
+
+        gradient = -gradient;
         gradient.normalize();
 
         gradient = ((-2.0 * direction.dot(gradient)) * gradient);

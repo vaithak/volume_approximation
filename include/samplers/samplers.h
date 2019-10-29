@@ -849,5 +849,79 @@ if (first) {
     p = Point(pVT);
 }
 
+template <class Point, class Parameters, typename NT>
+void HMC_boltzmann_reflections(Spectrahedron &spectrahedron, Point &p, NT che_rad, MT& LMIatP, MT& B1, MT& B2, Parameters &var, const VT& objectiveFunction,
+        const double& temperature, bool first = true) {
+
+    typedef typename Parameters::RNGType RNGType;
+    unsigned int n = spectrahedron.getLMI().getDim();
+    RNGType &rng = var.rng;
+    boost::random::uniform_real_distribution<> urdist(0, 1);
+    NT T = urdist(rng) * che_rad;
+    VT v = get_direction<RNGType, Point, NT>(n).getCoefficients();
+    int it = 0;
+    NT lambda_max = 0.0;
+    MT B;
+    VT genEivector;
+    VT pVT = p.getCoefficients();
+
+
+    if (first) {
+        double lambda = spectrahedron.boundaryOracle_Boltzmann_HMC(pVT, v, objectiveFunction, temperature, LMIatP, B1, B2, genEivector, true);
+
+        MT C = LMIatP + (lambda*B1) + (lambda*lambda*B2);
+
+        lambda = 0.995 * lambda;
+
+        if (lambda == 0)
+            return;
+
+        if (T <= lambda) {
+            pVT = (-0.5 / temperature)*objectiveFunction*T*T + v * T + pVT;
+            p = Point(pVT);
+            LMIatP += (T*B1) + (T*T*B2);
+            return;
+        }
+
+        pVT = (-0.5 / temperature)*objectiveFunction*lambda*lambda + v * lambda + pVT;
+        LMIatP += (lambda*B1) + (lambda*lambda*B2);;
+        T -= lambda;
+
+
+        spectrahedron.compute_reflection(genEivector, v, C);
+    }
+
+
+    while (it < 3 * n) {
+        std::cout << " $ " << p.dot(Point(objectiveFunction)) << "\n";
+        double lambda = spectrahedron.boundaryOracle_Boltzmann_HMC(pVT, v, objectiveFunction, temperature, LMIatP, B1, B2, genEivector, false);
+        MT C = LMIatP + (lambda*B1) + (lambda*lambda*B2);
+
+        lambda = 0.995 * lambda;
+
+        if (lambda == 0) {
+            p = Point(pVT);
+            return;
+        }
+
+        if (T <= lambda) {
+            pVT = (-0.5 / temperature)*objectiveFunction*T*T + v * T + pVT;
+            LMIatP += (T*B1) + (T*T*B2);
+            break;
+        }
+
+        pVT = (-0.5 / temperature)*objectiveFunction*lambda*lambda + v * lambda + pVT;
+        LMIatP += (lambda*B1) + (lambda*lambda*B2);;
+        T -= lambda;
+
+        spectrahedron.compute_reflection(genEivector, v, C);
+
+        it++;
+    }
+
+    p = Point(pVT);
+}
+
+
 
 #endif //RANDOM_SAMPLERS_H

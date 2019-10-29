@@ -155,6 +155,7 @@ namespace optimization {
             RANDOMIZED_CUTTING_PLANE,
             RANDOMIZED_CUTTING_PLANE_COVARIANCE_MATRIX,
             RANDOMIZED_CUTTING_PLANE_BILLIARD,
+            SIMULATED_ANNEALING_HMC,
             SIMULATED_ANNEALING_EFICIENT_COVARIANCE,
         } Algorithm;
 
@@ -253,6 +254,7 @@ namespace optimization {
         template <class Parameters>
         void solve(Parameters &parameters, double error, unsigned int maxSteps, Algorithm algorithm) {
             Point initial(getStrictlyFeasiblePoint());
+            Point obj;
 
             switch (algorithm) {
                 case RANDOMIZED_CUTTING_PLANE:
@@ -265,7 +267,11 @@ namespace optimization {
                     solution = cutting_plane_method_sampled_covariance_matrix(spectrahedron, objectiveFunction, parameters, error, maxSteps, initial);
                     break;
                 case SIMULATED_ANNEALING_EFICIENT_COVARIANCE:
-                    Point obj(objectiveFunction);
+                    obj = Point(objectiveFunction);
+                    solution = simulated_annealing_efficient_covariance(spectrahedron, obj, parameters, error, maxSteps, initial);
+                    break;
+                case SIMULATED_ANNEALING_HMC:
+                    obj = Point(objectiveFunction);
                     solution = simulated_annealing_efficient_covariance(spectrahedron, obj, parameters, error, maxSteps, initial);
                     break;
             }

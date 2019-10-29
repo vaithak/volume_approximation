@@ -176,6 +176,30 @@ namespace optimization {
         }
     }
 
+    template<class Parameters, class Point>
+    void min_rand_point_generator_Boltzmann(Spectrahedron &spectrahedron, const Point& objectiveFunction, Point &p, const unsigned int& walk_length, double che_rad,
+                                            Parameters &var, const double& temperature,  Point &minPoint, double& minValue, MT& B0,
+                                            MT& B1, MT& B2, bool first = true) {
+
+        VT c = objectiveFunction.getCoefficients();
+        HMC_boltzmann_reflections(spectrahedron, p, che_rad, B0, B1, B2, var, c, temperature, true);
+        minPoint = p;
+        minValue = p.dot(objectiveFunction);
+
+        // begin sampling
+        for (unsigned int i = 0 ; i < walk_length ; ++i) {
+            HMC_boltzmann_reflections(spectrahedron, p, che_rad, B0, B1, B2, var, c, temperature, false);
+
+            double  temp = p.dot(objectiveFunction);
+
+            if (temp < minValue) {
+                minValue = temp;
+                minPoint = p;
+            }
+        }
+    }
+
+
     template<class Parameters, class Point, typename NT>
     std::pair<Point, NT>
     simulated_annealing_efficient_covariance(Spectrahedron &spectrahedron, Point &objectiveFunction,
@@ -243,6 +267,67 @@ namespace optimization {
                 break;
 
 //            std::cout << " $ " << interiorPoint.dot(objectiveFunction) << "\n";
+
+            step++;
+        } while (step <= maxSteps || tillConvergence);
+
+        STEPS = step;
+
+        if (verbose) std::cout << "Ended at " << step << " steps" << std::endl;
+
+        return {minPoint, minPoint.dot(objectiveFunction)};
+    }
+
+
+    template<class Parameters, class Point, typename NT>
+    std::pair<Point, NT>
+    simulated_annealing_HMC(Spectrahedron &spectrahedron, Point &objectiveFunction,
+                                             Parameters parameters, const NT error,
+                                             const unsigned int maxSteps, Point &initial) {
+
+
+        VT obj = objectiveFunction.getCoefficients();
+        double normal = obj.norm();
+        obj.normalize();
+        Point objFunction = Point(obj);
+
+        bool verbose = parameters.verbose;
+        unsigned int walk_length = parameters.walk_steps;
+        bool tillConvergence = maxSteps == 0;
+        unsigned int step = 0;
+        int dim = initial.dimension();
+        std::list<Point> points;
+
+        SlidingWindow slidingWindowStop(5 + sqrt(dim));
+
+        Point interiorPoint = initial;
+
+        double tempDescentFactor = 1 - 1 / (double) std::sqrt(dim);
+        double temperature = 5;//TODO
+        double temperature_threshold = 0.000001 / dim;
+        double avgMinPerPhase;
+
+        double min = interiorPoint.dot(objFunction);
+        Point minPoint = interiorPoint;
+        MT B0, B1, B2;
+        double che_rad = 50;
+
+        do {
+
+            if (temperature > temperature_threshold) {
+                temperature *= tempDescentFactor;
+            }
+
+            min_rand_point_generator_Boltzmann(spectrahedron, objectiveFunction, interiorPoint, walk_length, che_rad, parameters,
+                    temperature,  minPoint, min, B0, B1, B2, step == 0);
+
+            slidingWindowStop.push(avgMinPerPhase / (double) walk_length);
+
+
+            if (slidingWindowStop.getRelativeError() < error)
+                break;
+
+            std::cout << " $ " << interiorPoint.dot(objectiveFunction) << "\n";
 
             step++;
         } while (step <= maxSteps || tillConvergence);

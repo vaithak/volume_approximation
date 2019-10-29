@@ -138,6 +138,11 @@ int main(const int argc, const char **argv) {
             correct = true;
         }
 
+        if (!strcmp(argv[i], "-HMC")) {
+                    algorithm = sdp_problem::Algorithm::SIMULATED_ANNEALING_HMC;
+            correct = true;
+        }
+
         if (!strcmp(argv[i], "-r")) {
             numOfRandomPoints = atoi(argv[++i]);
             correct = true;
