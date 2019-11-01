@@ -272,7 +272,7 @@ namespace optimization {
                     break;
                 case SIMULATED_ANNEALING_HMC:
                     obj = Point(objectiveFunction);
-                    solution = simulated_annealing_efficient_covariance(spectrahedron, obj, parameters, error, maxSteps, initial);
+                    solution = simulated_annealing_HMC(spectrahedron, obj, parameters, error, maxSteps, initial);
                     break;
             }
         }

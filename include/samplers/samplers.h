@@ -26,7 +26,7 @@ Point get_direction(unsigned int dim) {
     boost::normal_distribution<> rdist(0,1);
     std::vector<NT> Xs(dim,0);
     NT normal = NT(0);
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    unsigned seed = 4;// std::chrono::system_clock::now().time_since_epoch().count();//4 if fixed for debug
     RNGType rng(seed);
     //RNGType rng2 = var.rng;
     for (unsigned int i=0; i<dim; i++) {
@@ -857,7 +857,7 @@ void HMC_boltzmann_reflections(Spectrahedron &spectrahedron, Point &p, NT che_ra
     unsigned int n = spectrahedron.getLMI().getDim();
     RNGType &rng = var.rng;
     boost::random::uniform_real_distribution<> urdist(0, 1);
-    NT T = urdist(rng) * che_rad;
+    NT T = 0.7*che_rad;//urdist(rng) * che_rad;//0.7*che_rad;
     VT v = get_direction<RNGType, Point, NT>(n).getCoefficients();
     int it = 0;
     NT lambda_max = 0.0;
@@ -867,58 +867,73 @@ void HMC_boltzmann_reflections(Spectrahedron &spectrahedron, Point &p, NT che_ra
 
 
     if (first) {
+        std::cout << pVT.transpose() << "\n";
+        std::cout << v.transpose() << "\n";
         double lambda = spectrahedron.boundaryOracle_Boltzmann_HMC(pVT, v, objectiveFunction, temperature, LMIatP, B1, B2, genEivector, true);
 
-        MT C = LMIatP + (lambda*B1) + (lambda*lambda*B2);
 
-        lambda = 0.995 * lambda;
+
+        double lambdaSafe = 0.99 * lambda;
+
+        MT C = LMIatP + (lambdaSafe*B1) + (((-0.5*lambdaSafe*lambdaSafe)/temperature)*B2);
+
 
         if (lambda == 0)
             return;
 
-        if (T <= lambda) {
+        if (T <= lambdaSafe) {
             pVT = (-0.5 / temperature)*objectiveFunction*T*T + v * T + pVT;
             p = Point(pVT);
-            LMIatP += (T*B1) + (T*T*B2);
+            Point ss(objectiveFunction);
+            std::cout << " $ending " << p.dot(ss) << "\n";
+            LMIatP += (T*B1) + (((-0.5*T*T)/temperature)*B2);
             return;
         }
 
-        pVT = (-0.5 / temperature)*objectiveFunction*lambda*lambda + v * lambda + pVT;
-        LMIatP += (lambda*B1) + (lambda*lambda*B2);;
-        T -= lambda;
+        pVT = (-0.5 / temperature)*objectiveFunction*lambdaSafe*lambdaSafe + v * lambdaSafe + pVT;
+        LMIatP += (lambdaSafe*B1) + (((-0.5*lambdaSafe*lambdaSafe)/temperature)*B2);
+        T -= lambdaSafe;
 
-
+        v = -objectiveFunction* (lambda/(T)) + v;
+        std::cout << v.transpose() << "\n";
         spectrahedron.compute_reflection(genEivector, v, C);
+        std::cout << v.transpose() << "\n";
     }
 
 
     while (it < 3 * n) {
-        std::cout << " $ " << p.dot(Point(objectiveFunction)) << "\n";
+        Point oo(pVT);
+        Point ss(objectiveFunction);
+        std::cout << " $ " << oo.dot(ss) << " " << temperature << " " << che_rad << "\n";
+        std::cout << pVT.transpose() << "\n";
+        std::cout << v.transpose() << "\n";
         double lambda = spectrahedron.boundaryOracle_Boltzmann_HMC(pVT, v, objectiveFunction, temperature, LMIatP, B1, B2, genEivector, false);
-        MT C = LMIatP + (lambda*B1) + (lambda*lambda*B2);
+        MT C = LMIatP + (lambda*B1) + (((-0.5*lambda*lambda)/temperature)*B2);
 
-        lambda = 0.995 * lambda;
+        double lambdaSafe = 0.99 * lambda;
 
         if (lambda == 0) {
             p = Point(pVT);
             return;
         }
 
-        if (T <= lambda) {
+        if (T <= lambdaSafe) {
             pVT = (-0.5 / temperature)*objectiveFunction*T*T + v * T + pVT;
-            LMIatP += (T*B1) + (T*T*B2);
+            LMIatP += (T*B1) + (((-0.5*T*T)/temperature)*B2);
             break;
         }
 
-        pVT = (-0.5 / temperature)*objectiveFunction*lambda*lambda + v * lambda + pVT;
-        LMIatP += (lambda*B1) + (lambda*lambda*B2);;
-        T -= lambda;
+        pVT = (-0.5 / temperature)*objectiveFunction*lambdaSafe*lambdaSafe + v * lambdaSafe + pVT;
+        LMIatP += (lambda*B1) + (((-0.5*lambdaSafe*lambdaSafe)/temperature)*B2);
+        T -= lambdaSafe;
 
+        v = -objectiveFunction* (lambda/(T)) + v;
+        std::cout << v.transpose() << "\n";
         spectrahedron.compute_reflection(genEivector, v, C);
 
         it++;
     }
-
+    std::cout <<"end\n";
     p = Point(pVT);
 }
 

@@ -16,6 +16,38 @@
 
 namespace optimization {
 
+    template<class Parameters, class Point>
+    double maxDistanceFromPoint(Spectrahedron &spectrahedron,
+                                                     Point &p,   // a point to start
+                                                     Parameters &var)  // constants for volume
+    {
+
+        typedef typename Parameters::RNGType RNGType;
+        typedef typename Point::FT NT;
+
+        int dim = p.dimension();
+
+        // init the walks
+        RNGType &rng = var.rng;
+
+        Point p1 = p;
+        hit_and_run(p, spectrahedron, var);
+        double maxDist = euclideanDistance(p1, p);
+
+        for (unsigned int i = 1; i <= 10000 + 2*dim; ++i) {
+
+            hit_and_run(p, spectrahedron, var);
+
+            double newDist = euclideanDistance(p, p1);
+
+            if (newDist > maxDist)
+                maxDist = newDist;
+
+        } /*  for (unsigned int i = 1; i <= rnum ; ++i)  */
+
+        return maxDist;
+    }
+
     template <class Point, class Parameters>
     void min_hit_and_run_Boltzmann(Point &p,
                                    Spectrahedron &spectrahedron,
@@ -177,7 +209,7 @@ namespace optimization {
     }
 
     template<class Parameters, class Point>
-    void min_rand_point_generator_Boltzmann(Spectrahedron &spectrahedron, const Point& objectiveFunction, Point &p, const unsigned int& walk_length, double che_rad,
+    void min_rand_point_generator_Boltzmann(Spectrahedron &spectrahedron, Point& objectiveFunction, Point &p, const unsigned int& walk_length, double che_rad,
                                             Parameters &var, const double& temperature,  Point &minPoint, double& minValue, MT& B0,
                                             MT& B1, MT& B2, bool first = true) {
 
@@ -302,32 +334,38 @@ namespace optimization {
 
         Point interiorPoint = initial;
 
+        double che_rad = maxDistanceFromPoint(spectrahedron, interiorPoint, parameters);
+
         double tempDescentFactor = 1 - 1 / (double) std::sqrt(dim);
-        double temperature = 5;//TODO
+        double temperature = che_rad;
         double temperature_threshold = 0.000001 / dim;
-        double avgMinPerPhase;
 
         double min = interiorPoint.dot(objFunction);
         Point minPoint = interiorPoint;
         MT B0, B1, B2;
-        double che_rad = 50;
 
+        std::cout << " $ " << interiorPoint.dot(objectiveFunction) << "\n";
+
+        // if fixed for debug Temp = che rad = 10 and initial point
+        che_rad = temperature = 10;
+        interiorPoint = initial; // for debug
         do {
+
+
+            min_rand_point_generator_Boltzmann(spectrahedron, objFunction, interiorPoint, walk_length, che_rad, parameters,
+                    temperature,  minPoint, min, B0, B1, B2, step == 0);
 
             if (temperature > temperature_threshold) {
                 temperature *= tempDescentFactor;
             }
 
-            min_rand_point_generator_Boltzmann(spectrahedron, objectiveFunction, interiorPoint, walk_length, che_rad, parameters,
-                    temperature,  minPoint, min, B0, B1, B2, step == 0);
-
-            slidingWindowStop.push(avgMinPerPhase / (double) walk_length);
+            slidingWindowStop.push(interiorPoint.dot(objectiveFunction));
 
 
             if (slidingWindowStop.getRelativeError() < error)
                 break;
 
-            std::cout << " $ " << interiorPoint.dot(objectiveFunction) << "\n";
+            std::cout << " $h " << interiorPoint.dot(objectiveFunction) << "\n";
 
             step++;
         } while (step <= maxSteps || tillConvergence);
