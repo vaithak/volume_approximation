@@ -210,17 +210,15 @@ namespace optimization {
 
     template<class Parameters, class Point>
     void min_rand_point_generator_Boltzmann(Spectrahedron &spectrahedron, Point& objectiveFunction, Point &p, const unsigned int& walk_length, double che_rad,
-                                            Parameters &var, const double& temperature,  Point &minPoint, double& minValue, MT& B0,
-                                            MT& B1, MT& B2, bool first = true) {
+                                            Parameters &var,  double& temperature,  Point &minPoint, double& minValue, Spectrahedron::BoundaryOracleBoltzmannHMCSettings<Point>& settings) {
 
-        VT c = objectiveFunction.getCoefficients();
-        HMC_boltzmann_reflections(spectrahedron, p, che_rad, B0, B1, B2, var, c, temperature, true);
+        HMC_boltzmann_reflections(spectrahedron, p, che_rad, var, objectiveFunction, temperature, settings);
         minPoint = p;
         minValue = p.dot(objectiveFunction);
 
         // begin sampling
         for (unsigned int i = 0 ; i < walk_length ; ++i) {
-            HMC_boltzmann_reflections(spectrahedron, p, che_rad, B0, B1, B2, var, c, temperature, false);
+            HMC_boltzmann_reflections(spectrahedron, p, che_rad, var, objectiveFunction, temperature, settings);
 
             double  temp = p.dot(objectiveFunction);
 
@@ -338,22 +336,25 @@ namespace optimization {
 
         double tempDescentFactor = 1 - 1 / (double) std::sqrt(dim);
         double temperature = che_rad;
-        double temperature_threshold = 0.000001 / dim;
+        double temperature_threshold = 0.0001 / dim;
 
         double min = interiorPoint.dot(objFunction);
         Point minPoint = interiorPoint;
-        MT B0, B1, B2;
+        Spectrahedron::BoundaryOracleBoltzmannHMCSettings<Point> settings;
+        settings.first = true;
+        settings.epsilon = 0.001;
 
         std::cout << " $ " << interiorPoint.dot(objectiveFunction) << "\n";
 
         // if fixed for debug Temp = che rad = 10 and initial point
-        che_rad = temperature = 10;
-        interiorPoint = initial; // for debug
+//        che_rad = temperature = 10;
+//        interiorPoint = initial; // for debug
+
         do {
 
 
             min_rand_point_generator_Boltzmann(spectrahedron, objFunction, interiorPoint, walk_length, che_rad, parameters,
-                    temperature,  minPoint, min, B0, B1, B2, step == 0);
+                    temperature,  minPoint, min, settings);
 
             if (temperature > temperature_threshold) {
                 temperature *= tempDescentFactor;
@@ -365,7 +366,7 @@ namespace optimization {
             if (slidingWindowStop.getRelativeError() < error)
                 break;
 
-            std::cout << " $h " << interiorPoint.dot(objectiveFunction) << "\n";
+//            std::cout << " $h " << interiorPoint.dot(objectiveFunction) << "\n";
 
             step++;
         } while (step <= maxSteps || tillConvergence);

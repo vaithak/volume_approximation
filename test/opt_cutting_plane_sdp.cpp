@@ -28,6 +28,7 @@ typedef Eigen::Matrix<NT, Eigen::Dynamic, Eigen::Dynamic> MT;
 typedef Eigen::Matrix<NT, Eigen::Dynamic, 1> VT;
 
 extern int STEPS; //TODO delete this
+extern int BOUNDARY_CALLS;
 
 void printHelpMessage();
 
@@ -195,6 +196,7 @@ int main(const int argc, const char **argv) {
     std::vector<NT> results;
     std::vector<double> times;
     std::vector<int> steps;
+    std::vector<int> oracle_calls;
 
     for (unsigned int i = 0; i < numOfExperinments; ++i) {
 //        std::cout << "Experiment " << i + 1 << std::endl;
@@ -227,6 +229,11 @@ int main(const int argc, const char **argv) {
 //        Point p = Point(point);
         sdp.solve(var, distance, numMaxSteps, algorithm);
         auto t2 = std::chrono::steady_clock::now();
+        results.push_back(sdp.solution.second);
+        steps.push_back(STEPS);
+        times.push_back(std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count());
+        oracle_calls.push_back(BOUNDARY_CALLS);
+
         if ( std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() < 10000 ) {
             std::cout << "Computed at " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << " msecs" << std::endl << std::endl;
         }
@@ -239,6 +246,7 @@ int main(const int argc, const char **argv) {
 //        std::cout <<  sdp.isFeasible(sol)<< "\n";// << sdp.isFeasible(sol)<< " ffffffff\n";
         sdp.printSolution();
         std::cout << "STEPS " << STEPS << "\n";
+        std::cout << "BOUNDARY_CALLS " << BOUNDARY_CALLS << "\n";
     }
 
     double sum = 0;
@@ -271,22 +279,14 @@ int main(const int argc, const char **argv) {
 
     steps_avg = steps_avg / steps.size();
 
-//    std::cout << std::fixed;
-//    std::cout << std::setprecision(3);
+    std::cout << std::fixed;
+    std::cout << std::setprecision(3);
 
-//    auto t1 = std::chrono::steady_clock::now();
-//    double exact = solveWithLPSolve(lp);
-//    auto t2 = std::chrono::steady_clock::now();
-//    std::cout << "\nStatistics\n" <<
-//              "Average result: " << average << "\n"<<
-//              "Average time: " << avg_time << "\n" <<
-//              "Average # Steps: " << steps_avg << "\n" <<
-//              "Variance: " << variance << "\n" <<
-//              "Standard deviation: " << std_dev << "\n" <<
-//              "Coefficient of variation: " << abs(std_dev / average)  << "\n" <<
-//              "Exact Solution: " << exact  << "\n" <<
-//              "lpsolve time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << " \n"
-//                                                                                                            "Relative error: " << abs((exact - average) / exact) << "\n";
+    std::cout << "\nStatistics\n" <<
+              "Average result: " << average << "\n"<<
+              "Average time: " << avg_time << "\n" <<
+              "Average # Steps: " << steps_avg << "\n" <<
+           "Average # boundary calls: " << BOUNDARY_CALLS << "\n";
     return 0;
 }
 

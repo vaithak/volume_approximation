@@ -12,6 +12,7 @@
 #include <iostream>
 #include "Eigen"
 
+
 template <class K>
 class point
 {
@@ -19,6 +20,7 @@ private:
     unsigned int d;
 
     typedef Eigen::Matrix<typename K::FT, Eigen::Dynamic,1> Coeff;
+    typedef Eigen::Matrix<typename K::FT,Eigen::Dynamic,Eigen::Dynamic> MT;
 
     Coeff coeffs;
     typedef typename std::vector<typename K::FT>::iterator iter;
@@ -66,7 +68,7 @@ public:
         return coeffs(i);
     }
 
-    point operator+ (point& p) {
+    point operator+ (const point& p) const {
         point temp;
         temp.d = d;
         temp.coeffs = coeffs + p.getCoefficients();
@@ -77,28 +79,28 @@ public:
         this->coeffs = coeffs + this->coeffs;
     }
 
-    point operator- (point& p) {
+    point operator- (point& p) const{
         point temp;
         temp.d = d;
         temp.coeffs = coeffs - p.getCoefficients();
         return temp;
     }
 
-    point operator* (const FT& k) {
+    point operator* (const FT& k) const {
         point temp;
         temp.d = d;
         temp.coeffs = coeffs * k;
         return temp;
     }
 
-    point operator/ (const FT& k) {
+    point operator/ (const FT& k) const{
         point temp;
         temp.d = d;
         temp.coeffs = coeffs / k;
         return temp;
     }
 
-    bool operator== (point& p) {//TODO check dim?
+    bool operator== (point& p) const{//TODO check dim?
         int i=0;
 
         for (i=0 ; i<d ; i++) {
@@ -109,10 +111,17 @@ public:
     }
 
 
-    FT dot(point& p){
+    FT dot(const point& p){
         return coeffs.dot(p.getCoefficients());
     }
 
+    point matrix_left_product(const MT& matrix) {
+        return point(matrix * coeffs);
+    }
+
+    void normalize() {
+        this->coeffs.normalize();
+    }
 
     FT squared_length() {
 

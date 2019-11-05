@@ -17,6 +17,7 @@
 #include "heuristics.h"
 
 //int STEPS;
+extern int BOUNDARY_CALLS;
 
 namespace optimization {
 
@@ -813,7 +814,7 @@ namespace optimization {
         bool tillConvergence = maxSteps == 0;
         unsigned int step = 0;
         int dim = objectiveFunction.rows();
-
+        BOUNDARY_CALLS = 0;
         SlidingWindow slidingWindow(5 + sqrt(dim));
         std::pair<Point, Point> minimizingPoints;
 

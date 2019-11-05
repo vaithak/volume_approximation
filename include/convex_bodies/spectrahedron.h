@@ -14,7 +14,7 @@
 #include <limits>
 
 const double ZERO = 0.0000000001;
-
+int BOUNDARY_CALLS;
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> MT;
 
 typedef Eigen::Matrix<double, Eigen::Dynamic, 1> VT;
@@ -112,7 +112,7 @@ public:
         Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivals = solver.eigenvalues();
 
         for (int i = 0; i < eivals.rows(); i++) {
-            std::cout << eivals(i).real() << "\n";
+//            std::cout << eivals(i).real() << "\n";
             if (eivals(i).real() > 0)
                 return false;
         }
@@ -345,7 +345,7 @@ public:
     std::pair<double, double> boundaryOracleEfficient(const VT& position, const VT& direction, const VT& a, double b) {
         MT A = lmi.evaluate(position);
         MT B = -lmi.evaluateWithoutA0(direction);
-
+        BOUNDARY_CALLS++;
         // Construct matrix operation object using the wrapper classes
         Spectra::DenseSymMatProd<double> op(B);
         Spectra::DenseCholesky<double>  Bop(-A);
@@ -401,7 +401,7 @@ public:
         MT B = -lmi.evaluateWithoutA0(direction);
 
         Eigen::GeneralizedEigenSolver<MT> ges(A, B);
-
+        BOUNDARY_CALLS++;
         Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType alphas = ges.alphas();
         VT betas = ges.betas();
 
@@ -459,7 +459,7 @@ public:
     std::pair<double, bool> boundaryOraclePositive(const VT& position, const VT& direction, const VT& a, double b, MT& LMIatP, MT& B, VT& genEivector, bool first = true) {
         if (first)
             LMIatP = lmi.evaluate(position);
-
+        BOUNDARY_CALLS++;
 //        if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
 
         B = -lmi.evaluateWithoutA0(direction);
@@ -506,40 +506,66 @@ public:
         return {lambdaMinPositive, hitCuttingPlane};
     }
 
-    double boundaryOracle_Boltzmann_HMC(const VT& position, const VT& direction, const VT& objectiveFunction, const double& temp,
-            MT& B0, MT& B1, MT& B2, VT& genEivector, bool first = true) {
+
+    template <class Point>
+    class BoundaryOracleBoltzmannHMCSettings {
+    public:
+        MT B0, B1, B2;
+        Point genEigenvector;
+        Point gradient;
+        bool first; //true if first call of the boundary oracle
+        double epsilon; //when a point is this close to the boundary, consider it a boundary point
+        bool isBoundaryPoint;
+
+        BoundaryOracleBoltzmannHMCSettings(){
+            first = true;
+            epsilon = 0.0001;
+        }
+    };
+
+    template <class Point>
+    double boundaryOracle_Boltzmann_HMC(const Point& _position, const Point& _direction, const Point& _objectiveFunction, const double& temp, BoundaryOracleBoltzmannHMCSettings<Point>& settings) {
+
+        const VT& position = _position.getCoefficients();
+        const VT& direction = _direction.getCoefficients();
+        const VT& objectiveFunction = _objectiveFunction.getCoefficients();
 
         unsigned int matrixDim= lmi.getMatricesDim();
         if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
-        lmi.print();
-            std::cout << objectiveFunction << "\n";
+//            std::cout << objectiveFunction << "\n";
 //        if (first) {
-            B0 = lmi.evaluate(position);
-            B2 = lmi.evaluateWithoutA0(objectiveFunction);
+        settings.B0 = lmi.evaluate(position);
+        settings.B2 = lmi.evaluateWithoutA0(objectiveFunction);
 //        }
 
-        B1 = lmi.evaluateWithoutA0(direction);
-        MT B2temp = B2 / (-2*temp);
+        settings.B1 = lmi.evaluateWithoutA0(direction);
+        MT B2temp = settings.B2 / (-2*temp);
 
         // create pencil matrix
         MT AA(2*matrixDim, 2*matrixDim);
         MT BB(2*matrixDim, 2*matrixDim);
 
-        BB.block(matrixDim, matrixDim, matrixDim, matrixDim) = -1*B0;
+        BB.block(matrixDim, matrixDim, matrixDim, matrixDim) = -1*settings.B0;
         BB.block(0, matrixDim, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
         BB.block(matrixDim, 0, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
         BB.block(0, 0, matrixDim, matrixDim) = B2temp;
 
-        AA.block(0, matrixDim, matrixDim, matrixDim) = B0;
-        AA.block(0, 0, matrixDim, matrixDim) = B1;
-        AA.block(matrixDim, 0, matrixDim, matrixDim) = B0;
+        AA.block(0, matrixDim, matrixDim, matrixDim) = settings.B0;
+        AA.block(0, 0, matrixDim, matrixDim) = settings.B1;
+        AA.block(matrixDim, 0, matrixDim, matrixDim) = settings.B0;
         AA.block(matrixDim, matrixDim, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
 
 
+//        double frobeniusNorm = 0;
+//        for (int i=0 ; i<2*matrixDim ; i++)
+//            for (int j=0 ; j<2*matrixDim ; j++)
+//                frobeniusNorm += BB(i,j) * BB(i,j);
+//        frobeniusNorm = std::sqrt(frobeniusNorm);
+
 //        SpMat A =AA.sparseView();
 //        SpMat B=BB.sparseView();
-    std::cout << AA << "\n\n\n";
-        std::cout << BB << "\n";
+//    std::cout << AA << "\n\n\n";
+//        std::cout << BB << "\n";
 
         // Construct matrix operation object using the wrapper classes
 //        Spectra::SparseSymMatProd<double> op(A);
@@ -609,7 +635,7 @@ public:
                 continue;
 
             double lambda = alphas(i).real() / betas(i);
-
+//            std::cout << lambda << " e\n";
             if (lambda > 0 && lambda < lambdaMinPositive) {
                 lambdaMinPositive = lambda;
                 index = i;
@@ -617,18 +643,36 @@ public:
             if (lambda < 0 && lambda > lambdaMaxNegative)
                 lambdaMaxNegative =lambda;
         }
-        std::cout << lambdaMinPositive << "eval\n";
+//        std::cout << lambdaMinPositive << "eval\n";
 
         Eigen::GeneralizedEigenSolver<MT>::EigenvectorsType eivecs = ges.eigenvectors();
         Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivec = eivecs.col(index);
 
-        genEivector.setZero(matrixDim);
+        settings.genEigenvector = Point(matrixDim);
 
         for (int i = 0 ; i<matrixDim ; i++)
-            genEivector(i) = eivec(matrixDim + i).real();
+            settings.genEigenvector.set_coord(i, eivec(matrixDim + i).real());
 
-        std::cout << eivecs.col(index)<<"evec\n";
+//        std::cout << eivecs.col(index)<<"evec\n";
         return lambdaMinPositive;
+    }
+
+    template <class Point>
+    void compute_reflection(BoundaryOracleBoltzmannHMCSettings<Point>& settings, Point& direction) {
+        std::vector<MT> matrices = lmi.getMatrices();
+        int dim = matrices.size();
+        settings.gradient = Point(dim);
+
+        for (int i=0 ; i<dim ; i++) {
+            settings.gradient.set_coord(i, settings.genEigenvector.dot((settings.genEigenvector.matrix_left_product(matrices[i]))));
+        }
+
+        settings.gradient.normalize();
+        settings.gradient = -1*settings.gradient;
+
+        Point t  = ((-2.0 * direction.dot(settings.gradient)) * settings.gradient);
+        direction = t + direction;
+        settings.gradient = -1*settings.gradient;
     }
 
     void compute_reflection(const VT& genEivector, VT& direction, MT& C) {
@@ -638,7 +682,7 @@ public:
         gradient = VT::Zero(dim);
 
         for (int i=0 ; i<dim ; i++) {
-            gradient(i) = genEivector.dot((-matrices[i])* genEivector);
+            gradient(i) = genEivector.dot((matrices[i])* genEivector);
         }
 
 //        Eigen::SelfAdjointEigenSolver<MT> es;
