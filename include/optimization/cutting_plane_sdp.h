@@ -18,7 +18,8 @@
 
 //int STEPS;
 extern int BOUNDARY_CALLS;
-
+extern double ORACLE_TIME;
+extern double REFLECTION_TIME;
 namespace optimization {
 
 
@@ -165,7 +166,7 @@ namespace optimization {
      * @return (p1, p2) p1 minimizes c the most and p2 follows
      */
     template<class Parameters, class Point>
-    std::pair<Point, Point> min_rand_point_generator(Spectrahedron &spectrahedron,
+    std::pair<Point, Point> min_rand_point_generator_spectrahedron(Spectrahedron &spectrahedron,
                                                      VT &c,
                                                      Point &p,   // a point to start
                                                      unsigned int rnum,
@@ -253,7 +254,7 @@ namespace optimization {
 
 
     template<class Parameters, class Point>
-    std::pair<Point, Point> min_rand_point_generator(Spectrahedron &spectrahedron,
+    std::pair<Point, Point> min_rand_point_generator_spectrahedron(Spectrahedron &spectrahedron,
                                                      VT &c,
                                                      Point &p,   // a point to start
                                                      unsigned int rnum,
@@ -333,7 +334,7 @@ namespace optimization {
     }
 
     template<class Parameters, class Point>
-    std::pair<Point, Point> min_rand_point_generator(Spectrahedron &spectrahedron,
+    std::pair<Point, Point> min_rand_point_generator_spectrahedron(Spectrahedron &spectrahedron,
                                                      VT &c,
                                                      Point &p,   // a point to start
                                                      unsigned int rnum,
@@ -431,8 +432,8 @@ namespace optimization {
      * @return (p1, p2) p1 minimizes c the most and p2 follows
      */
     template<class Parameters, class Point>
-    std::pair<Point, Point> min_rand_point_generator(Spectrahedron &spectrahedron,
-                                                     VT &c,
+    std::pair<Point, Point> min_rand_point_generator_spectrahedron(Spectrahedron &spectrahedron,
+                                                     const VT &c,
                                                      Point &p,   // a point to start
                                                      unsigned int rnum,
                                                      Parameters &var)  // constants for volume
@@ -517,7 +518,7 @@ namespace optimization {
 
 
     template<class Parameters, class Point>
-    std::pair<Point, Point> min_rand_point_generator(Spectrahedron &spectrahedron,
+    std::pair<Point, Point> min_rand_point_generator_spectrahedron(Spectrahedron &spectrahedron,
                                                      VT &c,
                                                      Point &p,   // a point to start
                                                      unsigned int rnum,
@@ -625,7 +626,7 @@ namespace optimization {
         Point interiorPoint = initial;
 
 
-        minimizingPoints = min_rand_point_generator(spectrahedron, objectiveFunction, interiorPoint, rnum, parameters, points);
+        minimizingPoints = min_rand_point_generator_spectrahedron(spectrahedron, objectiveFunction, interiorPoint, rnum, parameters, points);
 
         NT min = objectiveFunction.dot(minimizingPoints.second.getCoefficients());
         slidingWindow.push(min);
@@ -640,13 +641,13 @@ namespace optimization {
                 MT covarianceMatrix = sampledCovarianceMatrix(points);
                 points.clear();
 //                std::cout << covarianceMatrix << "\n";
-                minimizingPoints = min_rand_point_generator(spectrahedron, objectiveFunction, interiorPoint, rnum,
+                minimizingPoints = min_rand_point_generator_spectrahedron(spectrahedron, objectiveFunction, interiorPoint, rnum,
                                                             parameters, a, b, points, covarianceMatrix);
             }
             catch (int e) {
 //                if (verbose) std::cout << "Failed to compute covariance matrix - step " << step << "\n";
                 points.clear();
-                minimizingPoints = min_rand_point_generator(spectrahedron, objectiveFunction, interiorPoint, rnum,
+                minimizingPoints = min_rand_point_generator_spectrahedron(spectrahedron, objectiveFunction, interiorPoint, rnum,
                                                             parameters, a, b, points);
             }
 
@@ -694,7 +695,7 @@ namespace optimization {
         // get an internal point so you can sample
         Point interiorPoint = initial;
 
-        minimizingPoints = min_rand_point_generator(spectrahedron, objectiveFunction, interiorPoint, rnum, parameters);
+        minimizingPoints = min_rand_point_generator_spectrahedron(spectrahedron, objectiveFunction, interiorPoint, rnum, parameters);
 
         NT min = objectiveFunction.dot(minimizingPoints.second.getCoefficients());
         slidingWindow.push(min);
@@ -706,7 +707,7 @@ namespace optimization {
             std::list<Point> randPoints;
 
             // find where to cut the polytope
-            minimizingPoints = min_rand_point_generator(spectrahedron, objectiveFunction, interiorPoint, rnum,
+            minimizingPoints = min_rand_point_generator_spectrahedron(spectrahedron, objectiveFunction, interiorPoint, rnum,
                                                         parameters, a, b);
 
             min = objectiveFunction.dot(minimizingPoints.second.getCoefficients());
@@ -732,129 +733,159 @@ namespace optimization {
                                     objectiveFunction.dot(minimizingPoints.first.getCoefficients()));
     }
 
+    template <class Point, typename NT>
+    void checkNewMin(const NT& newVal,const Point& newPoint, NT& min1, Point& minP1, NT& min2, Point& minP2) {
+        if (newVal < min1) {
+            min2 = min1;
+            min1 = newVal;
+            minP2 = minP1;
+            minP1 = newPoint;
+        }
+        else if (newVal < min2) {
+            min2 = newVal;
+            minP2 = newPoint;
+        }
+    }
+
+    template <class Point, typename NT>
+    void findMinInList(Point& retMin, const Point& objectiveFunction, const std::list<Point>& pointlist) {
+        NT min = pointlist.front().dot(objectiveFunction);
+        retMin = pointlist.front();
+
+        for (auto point : pointlist) {
+            NT newProduct = point.dot(objectiveFunction);
+            if (newProduct < min) {
+                min = newProduct;
+                retMin = point;
+            }
+        }
+    }
+
+    template <class Point, class Pointlist, typename NT>
+    void checkNewMinInList(Point& minP1, Point& minP2, NT& min1, NT& min2, const Point& objectiveFunction, const Pointlist& intermediateBilliardPoints) {
+        if (intermediateBilliardPoints.empty())
+            return;
+
+        Point minInList;
+        findMinInList<Point, NT>(minInList, objectiveFunction, intermediateBilliardPoints);
+        checkNewMin(minInList.dot(objectiveFunction), minInList, min1, minP1, min2, minP2);
+    }
+
     template<class Parameters, class Point>
     std::pair<Point, Point> min_rand_point_generator_billiard(Spectrahedron &spectrahedron,
-                                                              VT& c,
+                                                              Point& objectiveFunction,
                                                               Point &p,   // a point to start
                                                               unsigned int rnum,
-                                                              const VT& a,
+                                                              const Point& a,
                                                               const double& b,
                                                               Parameters &var,
-                                                              double diameter)  // constants for volume
+                                                              double diameter,
+                                                              Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings)  // constants for volume
     {
 
         typedef typename Parameters::RNGType RNGType;
         typedef typename Point::FT NT;
 
-        int dim = p.dimension();
+        std::list<Point> intermediateBilliardPoints;
 
-        Point p1(dim), p2(dim), min1(dim), min2(dim);
-        NT kapa, ball_rad = var.delta;
-        Point p_prev = p;
-        MT LMIatP;
+        Point minP1, minP2;
+        billiard_walk(spectrahedron, p, diameter,  var, a, b, settings);
+        settings.first = false;
+        minP1 = p;
+        billiard_walk(spectrahedron, p, diameter,  var, a, b, settings);
+        minP2 = p;
 
-        billiard_walk(spectrahedron, p, diameter, LMIatP, var, a, b, true);
+        NT min1 = minP1.dot(objectiveFunction);
+        NT min2 = minP2.dot(objectiveFunction);
 
-
-        // get the first two points
-        min1 = p;
-        NT minProduct1 = min1.getCoefficients().dot(c);
-
-
-        billiard_walk(spectrahedron, p, diameter, LMIatP, var, a, b, false);
-
-        min2 = p;
-        NT minProduct2 = min2.getCoefficients().dot(c);
-        NT newProduct = minProduct2;
-
-        if (minProduct1 > minProduct2) {
-            NT temp = minProduct1;
-            minProduct1 = minProduct2;
-            minProduct2 = temp;
-            Point t = min1;
-            min1 = min2;
-            min2 = t;
+        if (min1 > min2) {
+            std::swap(min1, min2);
+            std::swap(minP1, minP2);
         }
 
-        std::pair<NT, NT> bpair;
-
-        // begin sampling
-
-        for (unsigned int i = 1; i <= rnum ; ++i) {
+//        checkNewMinInList(minP1,minP2, min1, min2, objectiveFunction, intermediateBilliardPoints);
+//        intermediateBilliardPoints.clear();
 
 
-            billiard_walk(spectrahedron, p, diameter, LMIatP, var, a, b, false);
-            newProduct = p.getCoefficients().dot(c);
+        for (unsigned int i = 3; i <= rnum ; ++i) {
 
+            billiard_walk(spectrahedron, p, diameter,  var, a, b,  settings);
+//            std::cout << "size " << intermediateBilliardPoints.size() << "\n";
+            NT newProduct = p.dot(objectiveFunction);
+            checkNewMin(newProduct, p, min1, minP1, min2, minP2);
 
-            // get new minimizing point
-            bool changedMin1 = false;
-            bool changedMin2 = false;
-
-            getNewMinimizingPoints(p, minProduct1, minProduct2, min1, min2, newProduct, changedMin1, changedMin2);
+//            checkNewMinInList(minP1,minP2, min1, min2, objectiveFunction, intermediateBilliardPoints);
+//            intermediateBilliardPoints.clear();
 
         } /*  for (unsigned int i = 1; i <= rnum ; ++i)  */
 
         // find an interior point to start the next phase
-        Point _p =  min1*0.50;
-        Point _p1 = min2*0.50;
+//        Point _p =  0.5*minP1;
+//        Point _p1 = 0.5*minP2;
 
-        p = _p + _p1;// + _p2 + _p3;
+        p = 0.5*minP1 + 0.5*minP2;// + _p2 + _p3;
+        settings.first = true;
+//        std::cout << "res " << minP1.dot(objectiveFunction) << " " << minP2.dot(objectiveFunction) << " " << euclideanDistance(minP1, p) << "\n";
+        return std::pair<Point, Point>(minP1, minP2);
+    }
 
-        return std::pair<Point, Point>(min1, min2);
+    template <class Point>
+    double getDiameterLength(const Point& p1, const Point& p2, double maxSegmentLength) {
+        double distance = euclideanDistance(p1, p2);
+        double retVal = maxSegmentLength > distance ? maxSegmentLength : distance;
+        return (1.5 + (double) pow((double)p1.dimension(), 0.25) / 5) * retVal;
     }
 
     template<class Parameters, class Point, typename NT>
     std::pair<Point, NT>
-    cutting_plane_method_billiard(Spectrahedron &spectrahedron, VT &objectiveFunction, Parameters parameters, const NT error,
+    cutting_plane_method_billiard(Spectrahedron &spectrahedron, Point &objectiveFunction, Parameters parameters, const NT error,
                          const unsigned int maxSteps, Point &initial) {
 
         bool verbose = parameters.verbose;
         unsigned int rnum = parameters.m;
         bool tillConvergence = maxSteps == 0;
         unsigned int step = 0;
-        int dim = objectiveFunction.rows();
-        BOUNDARY_CALLS = 0;
+        int dim = objectiveFunction.dimension();
+        BOUNDARY_CALLS = ORACLE_TIME = REFLECTION_TIME = 0;
+
         SlidingWindow slidingWindow(5 + sqrt(dim));
         std::pair<Point, Point> minimizingPoints;
-
+        Spectrahedron::BoundaryOracleBilliardSettings<Point> settings;
 
         // get an internal point so you can sample
         Point interiorPoint = initial;
+        minimizingPoints = min_rand_point_generator_spectrahedron(spectrahedron, objectiveFunction.getCoefficients(), interiorPoint, rnum, parameters);
 
-        minimizingPoints = min_rand_point_generator(spectrahedron, objectiveFunction, interiorPoint, rnum, parameters);
-
-        NT min = objectiveFunction.dot(minimizingPoints.second.getCoefficients());
+        NT min = objectiveFunction.dot(minimizingPoints.second);
         slidingWindow.push(min);
 
-        VT a  = objectiveFunction;
-        double a_norm = a.norm();
-        a.normalize();
-        double b = objectiveFunction.dot(minimizingPoints.second.getCoefficients()) / a_norm;
+        VT aa  = objectiveFunction.getCoefficients();
+        double a_norm = aa.norm();
+        aa.normalize();
+        Point a(aa);
+        double b = objectiveFunction.dot(minimizingPoints.second) / a_norm;
         double diameter;
+
         Point previousMinimizingSecond = initial;
 
         do {
-            diameter = euclideanDistance(previousMinimizingSecond, minimizingPoints.second);
+            diameter = getDiameterLength(previousMinimizingSecond, minimizingPoints.first, settings.maxSegmentLength());
 
             previousMinimizingSecond = minimizingPoints.second;
+
             // find where to cut the polytope
-            minimizingPoints = min_rand_point_generator_billiard(spectrahedron, objectiveFunction, interiorPoint, rnum, a, b, parameters, diameter);
+            settings.resetMaxSegmentLength();
+            minimizingPoints = min_rand_point_generator_billiard(spectrahedron, objectiveFunction, interiorPoint, rnum, a, b, parameters, diameter, settings);
 
-
-
-            min = objectiveFunction.dot(minimizingPoints.second.getCoefficients());
+            min = objectiveFunction.dot(minimizingPoints.second);
             b = min/a_norm;
+
             slidingWindow.push(min);
 
-            VT coeffs = interiorPoint.getCoefficients();
-            if (slidingWindow.getRelativeError() < error || spectrahedron.isSingular(coeffs))
+            if (slidingWindow.getRelativeError() < error)
                 break;
 
-
             step++;
-
-//            std::cout << min << " " << step << "+++++++++++++++++++++++++++++++++++++++++++\n";
         } while (step <= maxSteps || tillConvergence);
 
         STEPS = step;
@@ -863,7 +894,7 @@ namespace optimization {
 
 
         return std::pair<Point, NT>(minimizingPoints.first,
-                                    objectiveFunction.dot(minimizingPoints.first.getCoefficients()));
+                                    objectiveFunction.dot(minimizingPoints.first));
     }
 
 }

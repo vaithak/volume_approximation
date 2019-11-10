@@ -19,7 +19,8 @@ typedef Eigen::Matrix<double , Eigen::Dynamic, Eigen::Dynamic> MT;
 double inf = std::numeric_limits<double>::infinity();
 
 double f(LMI& lmi, VT& x, double theta) {
-    MT A = lmi.evaluate(x);
+    MT A;
+    lmi.evaluate(x, A);
     double det = A.determinant();
 
     if (det <= 0)
@@ -68,7 +69,8 @@ void newton(LMI& lmi, VT& x, VT& c, double theta) {
     int steps = 0;
 
     do {
-        MT A = lmi.evaluate(x);
+        MT A;
+        lmi.evaluate(x, A);
         MT Ainverse = A.inverse();
 
 //        std::cout << lmi.isPositiveDefinite(x)<< " " << lmi.isPositiveSemidefinite(x) << " efe\n";
@@ -124,7 +126,8 @@ void gradientDescent(LMI& lmi, VT& c, VT &x, double m) {
 
     do {
         // compute the gradient
-        MT A = lmi.evaluate(x);
+        MT A;
+        lmi.evaluate(x, A);
         MT Ainverse = A.inverse();
 
 //        std::cout << lmi.isPositiveDefinite(x)<< " " << lmi.isPositiveSemidefinite(x) << " efe\n";

@@ -261,7 +261,8 @@ namespace optimization {
                     solution = cutting_plane_method(spectrahedron, objectiveFunction, parameters, error, maxSteps, initial);
                     break;
                 case RANDOMIZED_CUTTING_PLANE_BILLIARD:
-                    solution = cutting_plane_method_billiard(spectrahedron, objectiveFunction, parameters, error, maxSteps, initial);
+                    obj = Point(objectiveFunction);
+                    solution = cutting_plane_method_billiard(spectrahedron, obj, parameters, error, maxSteps, initial);
                     break;
                 case RANDOMIZED_CUTTING_PLANE_COVARIANCE_MATRIX:
                     solution = cutting_plane_method_sampled_covariance_matrix(spectrahedron, objectiveFunction, parameters, error, maxSteps, initial);

@@ -72,6 +72,11 @@ namespace optimization {
             return abs((min - evals.front()) / min);
         }
 
+        double getRelativeErrorLastRound(double min) {
+             return abs((min - evals.back()) / min);
+        }
+
+
         void half() {
             for (int i=0 ; i<evals.size()/2 ; i++) {
                 evals.pop();
@@ -787,7 +792,7 @@ namespace optimization {
 
 
     template <class Point>
-    double euclideanDistance(Point& v1, Point& v2) {
+    double euclideanDistance(const Point& v1, const Point& v2) {
         double sum = 0;
 
         for (int i=0 ; i<v1.dimension() ; i++)

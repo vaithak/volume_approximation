@@ -11,12 +11,16 @@
 #include <Spectra/MatOp/SparseCholesky.h>
 #include <vector>
 #include <Eigen/Eigen>
+#include <chrono>
 #include <limits>
 
 const double ZERO = 0.0000000001;
+double ORACLE_TIME;
+double REFLECTION_TIME;
 int BOUNDARY_CALLS;
-typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> MT;
 
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> MT;
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MT_ROWMAJOR;
 typedef Eigen::Matrix<double, Eigen::Dynamic, 1> VT;
 typedef Eigen::SparseMatrix<double> SpMat;
 
@@ -28,22 +32,25 @@ class LMI {
 
     // the matrices A_i, i>0
     std::vector<MT> matrices;
-
+    MT_ROWMAJOR vectorMatrix;
     typedef std::vector<MT>::iterator Iter;
 
 public:
     LMI() {};
 
-    LMI(std::vector<MT>& matrices) {
+    LMI(std::vector<MT> &matrices) {
         this->A0 = matrices[0];
-
-        for (int i=1 ; i<matrices.size() ; i++)
+        for (int i = 1; i < matrices.size(); i++) {
             this->matrices.push_back(matrices[i]);
+        }
+
+        setVectorMatrix();
     }
 
-    LMI(const LMI& lmi) {
+    LMI(const LMI &lmi) {
         this->A0 = lmi.A0;
         this->matrices = lmi.matrices;
+        setVectorMatrix();
     }
 
     /**
@@ -52,18 +59,29 @@ public:
      * @param x
      * @return
      */
-    MT evaluate(const VT& x) {
-       MT res = A0;
-       int i = 0;
+    void evaluate(const VT &x, MT &res) {
+        int dim = A0.rows();
+        res = MT::Zero(dim, dim);
+        res += A0;
+        int i = 0;
 
-       for (Iter iter=matrices.begin() ; iter!=matrices.end() ; iter++, i++)
-           res += x(i) * (*iter);
-
-       return res;
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
+            res.noalias() += x(i) * (*iter);
     }
 
-    bool isSingular(VT& x) {
-        MT mt = evaluate(x);
+    void evaluate_revised(const VT &x, MT &res) {
+        res.setConstant(0);
+        res += A0;
+        int i = 0;
+
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
+            res.noalias() += x(i) * (*iter);
+    }
+
+
+    bool isSingular(VT &x) {
+        MT mt;
+        evaluate(x, mt);
 
         Eigen::EigenSolver<MT> solver;
         solver.compute(mt);
@@ -76,8 +94,9 @@ public:
         return false;
     }
 
-    bool isSingular(VT& x, double approx) {
-        MT mt = evaluate(x);
+    bool isSingular(VT &x, double approx) {
+        MT mt;
+        evaluate(x, mt);
 
         Eigen::EigenSolver<MT> solver;
         solver.compute(mt);
@@ -90,8 +109,9 @@ public:
         return false;
     }
 
-    bool isNegativeDefinite(const VT& x) {
-        MT mt = evaluate(x);
+    bool isNegativeDefinite(const VT &x) {
+        MT mt;
+        evaluate(x, mt);
 
         Eigen::EigenSolver<MT> solver;
         solver.compute(mt);
@@ -104,8 +124,9 @@ public:
         return true;
     }
 
-    bool isNegativeSemidefinite(const VT& x) {
-        MT mt = evaluate(x);
+    bool isNegativeSemidefinite(const VT &x) {
+        MT mt;
+        evaluate(x, mt);
 
         Eigen::EigenSolver<MT> solver;
         solver.compute(mt);
@@ -120,8 +141,9 @@ public:
         return true;
     }
 
-    bool isPositiveSemidefinite(VT& x) {
-        MT mt = evaluate(x);
+    bool isPositiveSemidefinite(VT &x) {
+        MT mt;
+        evaluate(x, mt);
 
         Eigen::EigenSolver<MT> solver;
         solver.compute(mt);
@@ -134,8 +156,9 @@ public:
         return true;
     }
 
-    bool isPositiveDefinite(VT& x) {
-        MT mt = evaluate(x);
+    bool isPositiveDefinite(VT &x) {
+        MT mt;
+        evaluate(x, mt);
 
         Eigen::EigenSolver<MT> solver;
         solver.compute(mt);
@@ -149,17 +172,17 @@ public:
     }
 
 
-    bool isPositiveSemidefinite(VT& x, MT& mt, VT& minEigenVector, double& minEigenvalue) {
+    bool isPositiveSemidefinite(VT &x, MT &mt, VT &minEigenVector, double &minEigenvalue) {
         bool res = true;
 
-        mt = evaluate(x);
+        evaluate(x, mt);
 
         Eigen::EigenSolver<MT> solver;
         solver.compute(mt);
         Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivals = solver.eigenvalues();
         minEigenVector.resize(solver.eigenvectors().col(0).rows());
 
-        for (int i=0 ; i<minEigenVector.rows() ; i++) {
+        for (int i = 0; i < minEigenVector.rows(); i++) {
             minEigenVector(i) = solver.eigenvectors().col(0)(i).real();
 
         }
@@ -168,7 +191,7 @@ public:
         int minIndex = 0;
 
         for (int i = 0; i < eivals.rows(); i++) {
-            for (int j=0 ; j<minEigenVector.rows() ; j++) {
+            for (int j = 0; j < minEigenVector.rows(); j++) {
                 minEigenVector(j) = solver.eigenvectors().col(i)(j).real();
             }
 
@@ -182,9 +205,9 @@ public:
         }
 
 
-        minEigenvalue = eivals(minIndex).real()  / minEigenVector.norm() ;
+        minEigenvalue = eivals(minIndex).real() / minEigenVector.norm();
 
-        for (int i=0 ; i<minEigenVector.rows() ; i++) {
+        for (int i = 0; i < minEigenVector.rows(); i++) {
             minEigenVector(i) = solver.eigenvectors().col(minIndex)(i).real();
 
         }
@@ -202,7 +225,7 @@ public:
         return A0.rows();
     }
 
-    const std::vector<MT>& getMatrices() const {
+    const std::vector<MT> &getMatrices() const {
         return matrices;
     }
 
@@ -212,31 +235,108 @@ public:
      * @param x
      * @return
      */
-    MT evaluateWithoutA0(const VT& x) {
+    void evaluateWithoutA0(const VT &x, MT &res) {
         long dim = A0.rows();
-        MT res;
-        res.setZero(dim, dim);
+
+        res = MT::Zero(dim, dim);
+
         int i = 0;
 
-        for (Iter iter=matrices.begin() ; iter!=matrices.end() ; iter++, i++)
-            res += x(i) * (*iter);
-
-        return res;
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
+            res.noalias() += x(i) * (*iter);
     }
 
-    const MT& getAi(int i) const {
+    /**
+ * Evaluate the lmi for vector x without taking int account matrix A0
+ *
+ * @param x
+ * @return
+ */
+    void evaluateWithoutA0_revised(const VT &x, MT &res) {
+
+        long dim = A0.rows();
+
+        VT a = vectorMatrix * x;
+
+        double *data = res.data();
+        double *v = a.data();
+
+        int at = 0;
+
+        // copy lower triangular
+        for (int at_col = 0; at_col < dim; at_col++) {
+            int col_offset = at_col * dim;
+            double *target = data + col_offset + at_col;
+
+            for (int at_row = at_col; at_row < dim; at_row++) {
+                *(target++) = *(v++);
+            }
+        }
+
+        v = a.data();
+
+        // copy upper triangular
+        for (int at_row = 0; at_row < dim; at_row++) {
+            double *target = data + at_row + at_row * dim;
+
+            for (int at_col = at_row; at_col < dim; at_col++) {
+                *target = *(v++);
+                target = target + dim;
+            }
+        }
+
+    }
+
+    void setVectorMatrix() {
+        int dim = getMatricesDim();
+        int newDim = dim * (dim + 1) / 2;
+
+        vectorMatrix.resize(newDim, getDim());
+
+        int atMatrix = 0;
+
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, atMatrix++) {
+            int i = 0;
+
+            for (int at_row = 0; at_row < dim; at_row++)
+                for (int at_col = at_row; at_col < dim; at_col++) {
+                    vectorMatrix(i++, atMatrix) = (*iter)(at_row, at_col);
+                }
+
+        }
+
+    }
+
+    void evaluateWithoutA0_revised2(const VT &x, MT &res) {
+        int i = 0;
+
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
+            res.noalias() += x(i) * (*iter);
+    }
+
+    void evaluateWithoutA0(const VT &x, Eigen::TriangularView<MT, Eigen::Upper> &res) {
+        long dim = A0.rows();
+
+        res = MT::Zero(dim, dim);
+        int i = 0;
+
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
+            res += x(i) * (*iter);
+    }
+
+    const MT &getAi(int i) const {
         return matrices[i];
     }
 
-    const MT& getA0() const {
+    const MT &getA0() const {
         return A0;
     }
 
-    void setA0(MT& A0) {
+    void setA0(MT &A0) {
         this->A0 = A0;
     }
 
-    void addMatrix(MT& matrix) {
+    void addMatrix(MT &matrix) {
         matrices.push_back(matrix);
     }
 
@@ -244,7 +344,7 @@ public:
         std::cout << "F0" << "\n" << A0 << "\n";
         int i = 1;
 
-        for (Iter iter=matrices.begin() ; iter!=matrices.end() ; iter++, i++) {
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++) {
             std::cout << "F" << i << "\n";
             std::cout << *iter << "\n";
         }
@@ -253,7 +353,7 @@ public:
     void changeInequalityDirection() {
         A0 = -1 * A0;
 
-        for (int i=0 ; i<matrices.size() ; i++)
+        for (int i = 0; i < matrices.size(); i++)
             matrices[i] = -1 * matrices[i];
     }
 
@@ -274,19 +374,18 @@ public:
 
     Spectrahedron() {}
 
-    Spectrahedron(const Spectrahedron& spectrahedron) {
+    Spectrahedron(const Spectrahedron &spectrahedron) {
         LMI lmi;
         this->lmi = LMI(spectrahedron.getLMI());
     }
 
-    Spectrahedron(LMI& lmi) {
+    Spectrahedron(LMI &lmi) {
         this->lmi = lmi;
     }
 
-    const LMI& getLMI() const {
+    const LMI &getLMI() const {
         return lmi;
     }
-
 
 
     /**
@@ -297,21 +396,22 @@ public:
      * @param direction
      * @return (minimum positive eigenvalue, maximum negative eigenvalue)
      */
-    std::pair<double, double> boundaryOracle(const VT& position, const VT& direction) {
-        MT A = lmi.evaluate(position);
-        MT B = -lmi.evaluateWithoutA0(direction);
+    std::pair<double, double> boundaryOracle(const VT &position, const VT &direction) {
+        MT A;
+        lmi.evaluate(position, A);
+        MT B;
+        lmi.evaluateWithoutA0(-1 * direction, B);
 
 
-        Eigen::GeneralizedEigenSolver<MT> ges(A,B);
+        Eigen::GeneralizedEigenSolver<MT> ges(A, B);
         Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType alphas = ges.alphas();
         VT betas = ges.betas();
-
 
         double lambdaMaxNegative = minDouble;
         double lambdaMinPositive = maxDouble;
 
 
-        for (int i=0 ; i<alphas.rows() ; i++) {
+        for (int i = 0; i < alphas.rows(); i++) {
             if (betas(i) == 0) //TODO WARNING do what here?
                 continue;
 
@@ -320,13 +420,13 @@ public:
             if (lambda > 0 && lambda < lambdaMinPositive)
                 lambdaMinPositive = lambda;
             if (lambda < 0 && lambda > lambdaMaxNegative)
-                lambdaMaxNegative =lambda;
+                lambdaMaxNegative = lambda;
         }
 
         // for numerical stability
 //        if (lambdaMinPositive < ZERO) lambdaMinPositive = 0;
 //        if (lambdaMaxNegative > -ZERO) lambdaMaxNegative = 0;
-        if (lambdaMinPositive ==  maxDouble) lambdaMinPositive = 0; //TODO b must be too small..
+        if (lambdaMinPositive == maxDouble) lambdaMinPositive = 0; //TODO b must be too small..
         if (lambdaMaxNegative == minDouble) lambdaMaxNegative = 0;
 
         return {lambdaMinPositive, lambdaMaxNegative};
@@ -342,13 +442,16 @@ public:
     * @param direction
     * @return (minimum positive eigenvalue, maximum negative eigenvalue)
     */
-    std::pair<double, double> boundaryOracleEfficient(const VT& position, const VT& direction, const VT& a, double b) {
-        MT A = lmi.evaluate(position);
-        MT B = -lmi.evaluateWithoutA0(direction);
+    std::pair<double, double>
+    boundaryOracleEfficient(const VT &position, const VT &direction, const VT &a, double b) {
+        MT A;
+        lmi.evaluate(position, A);
+        MT B;
+        lmi.evaluateWithoutA0(-1 * direction, B);
         BOUNDARY_CALLS++;
         // Construct matrix operation object using the wrapper classes
         Spectra::DenseSymMatProd<double> op(B);
-        Spectra::DenseCholesky<double>  Bop(-A);
+        Spectra::DenseCholesky<double> Bop(-A);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
         Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
@@ -360,8 +463,7 @@ public:
         // Retrieve results
         Eigen::VectorXd evalues;
 //        Eigen::MatrixXd evecs;
-        if(geigs.info() == Spectra::SUCCESSFUL)
-        {
+        if (geigs.info() == Spectra::SUCCESSFUL) {
             evalues = geigs.eigenvalues();
 //            evecs = geigs.eigenvectors();
         }
@@ -370,8 +472,8 @@ public:
         double lambdaMinPositive;
 
         if (nconv == 2) {
-            lambdaMaxNegative = - 1/evalues(0);
-            lambdaMinPositive = -1/evalues(1);
+            lambdaMaxNegative = -1 / evalues(0);
+            lambdaMinPositive = -1 / evalues(1);
         } else {
             lambdaMaxNegative = lambdaMinPositive = 0;
         }
@@ -396,9 +498,11 @@ public:
     * @param direction
     * @return (minimum positive eigenvalue, maximum negative eigenvalue)
     */
-    std::pair<double, double> boundaryOracle(const VT& position, const VT& direction, const VT& a, double b) {
-        MT A = lmi.evaluate(position);
-        MT B = -lmi.evaluateWithoutA0(direction);
+    std::pair<double, double> boundaryOracle(const VT &position, const VT &direction, const VT &a, double b) {
+        MT A;
+        lmi.evaluate(position, A);
+        MT B;
+        lmi.evaluateWithoutA0(-1 * direction, B);
 
         Eigen::GeneralizedEigenSolver<MT> ges(A, B);
         BOUNDARY_CALLS++;
@@ -408,7 +512,7 @@ public:
         double lambdaMaxNegative = minDouble;
         double lambdaMinPositive = maxDouble;
 
-        for (int i=0 ; i<alphas.rows() ; i++) {
+        for (int i = 0; i < alphas.rows(); i++) {
 
             if (betas(i) == 0)  //TODO WARNING do what here?
                 continue;
@@ -418,14 +522,14 @@ public:
             if (lambda > 0 && lambda < lambdaMinPositive)
                 lambdaMinPositive = lambda;
             if (lambda < 0 && lambda > lambdaMaxNegative)
-                lambdaMaxNegative =lambda;
+                lambdaMaxNegative = lambda;
         }
 
 
         // for numerical stability
 //        if (lambdaMinPositive < ZERO) lambdaMinPositive = 0;
 //        if (lambdaMaxNegative > -ZERO) lambdaMaxNegative = 0;
-        if (lambdaMinPositive ==  maxDouble) lambdaMinPositive = 0; //TODO b must be too small..
+        if (lambdaMinPositive == maxDouble) lambdaMinPositive = 0; //TODO b must be too small..
         if (lambdaMaxNegative == minDouble) lambdaMaxNegative = 0;
 
 
@@ -447,48 +551,91 @@ public:
         lmi.changeInequalityDirection();
     }
 
-    bool isSingular(VT& x) {
+    bool isSingular(VT &x) {
         return lmi.isSingular(x);
     }
 
 
-    bool isSingular(VT& x, double approx) {
+    bool isSingular(VT &x, double approx) {
         return lmi.isSingular(x, approx);
     }
 
-    std::pair<double, bool> boundaryOraclePositive(const VT& position, const VT& direction, const VT& a, double b, MT& LMIatP, MT& B, VT& genEivector, bool first = true) {
-        if (first)
-            LMIatP = lmi.evaluate(position);
+    template<class Point>
+    class BoundaryOracleBilliardSettings {
+    public:
+        MT B, LMIatP;
+        Point genEigenvector;
+        double max_segment_length;
+        bool first; //true if first call of the boundary oracle
+
+        BoundaryOracleBilliardSettings() {
+            first = true;
+            max_segment_length = 0;
+        }
+
+        void setMaxSegmentLength(double lambda) {
+            if (lambda > 0 && lambda > max_segment_length)
+                max_segment_length = lambda;
+        }
+
+        void resetMaxSegmentLength() {
+            max_segment_length = 0;
+        }
+
+        double maxSegmentLength() {
+            return max_segment_length;
+        }
+    };
+
+    template<class Point>
+    std::pair<double, bool>
+    boundaryOracleBilliard(const VT &position, const VT &direction, const VT &a, const double &b,
+                           BoundaryOracleBilliardSettings<Point> &settings) {
+
+        if (settings.first) {
+            int dim = lmi.getMatricesDim();
+            settings.LMIatP.resize(dim, dim);
+            lmi.evaluate_revised(position, settings.LMIatP);
+            settings.B.resize(dim, dim);
+        }
+
         BOUNDARY_CALLS++;
 //        if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
 
-        B = -lmi.evaluateWithoutA0(direction);
+        lmi.evaluateWithoutA0_revised(direction, settings.B);
+
+        auto t1 = std::chrono::steady_clock::now();
 
         // Construct matrix operation object using the wrapper classes
-        Spectra::DenseSymMatProd<double> op(B);
-        Spectra::DenseCholesky<double>  Bop(-LMIatP);
+        Spectra::DenseSymMatProd<double> op(settings.B);
+        Spectra::DenseCholesky<double> Bop(-settings.LMIatP);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
-        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
-                geigs(&op, &Bop, 2, 3);
+        Spectra::SymGEigsSolver<double, Spectra::LARGEST_ALGE, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
+                geigs(&op, &Bop, 1, 15);
 
         // Initialize and compute
         geigs.init();
         int nconv = geigs.compute();
+
+        auto t2 = std::chrono::steady_clock::now();
+
+        ORACLE_TIME += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
         // Retrieve results
         Eigen::VectorXd evalues;
         Eigen::MatrixXd evecs;
-        if(geigs.info() == Spectra::SUCCESSFUL)
-        {
+
+        if (geigs.info() == Spectra::SUCCESSFUL) {
             evalues = geigs.eigenvalues();
             evecs = geigs.eigenvectors();
         }
 
         double lambdaMinPositive;
 
-        if (nconv == 2) {
-            lambdaMinPositive = -1/evalues(1);
-            genEivector = evecs.col(1);
+        if (nconv == 1) {
+            lambdaMinPositive = 1 / evalues(0);
+            settings.genEigenvector = Point(evecs.col(0));
         } else {
             lambdaMinPositive = 0;
         }
@@ -501,13 +648,15 @@ public:
             lambdaMinPositive = lambda;
             hitCuttingPlane = true;
         }
-        B = -B;
+
+        settings.setMaxSegmentLength(lambdaMinPositive);
+
 
         return {lambdaMinPositive, hitCuttingPlane};
     }
 
 
-    template <class Point>
+    template<class Point>
     class BoundaryOracleBoltzmannHMCSettings {
     public:
         MT B0, B1, B2;
@@ -517,35 +666,37 @@ public:
         double epsilon; //when a point is this close to the boundary, consider it a boundary point
         bool isBoundaryPoint;
 
-        BoundaryOracleBoltzmannHMCSettings(){
+        BoundaryOracleBoltzmannHMCSettings() {
             first = true;
             epsilon = 0.0001;
         }
     };
 
-    template <class Point>
-    double boundaryOracle_Boltzmann_HMC(const Point& _position, const Point& _direction, const Point& _objectiveFunction, const double& temp, BoundaryOracleBoltzmannHMCSettings<Point>& settings) {
+    template<class Point>
+    double
+    boundaryOracle_Boltzmann_HMC(const Point &_position, const Point &_direction, const Point &_objectiveFunction,
+                                 const double &temp, BoundaryOracleBoltzmannHMCSettings<Point> &settings) {
 
-        const VT& position = _position.getCoefficients();
-        const VT& direction = _direction.getCoefficients();
-        const VT& objectiveFunction = _objectiveFunction.getCoefficients();
+        const VT &position = _position.getCoefficients();
+        const VT &direction = _direction.getCoefficients();
+        const VT &objectiveFunction = _objectiveFunction.getCoefficients();
 
-        unsigned int matrixDim= lmi.getMatricesDim();
+        unsigned int matrixDim = lmi.getMatricesDim();
         if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
 //            std::cout << objectiveFunction << "\n";
 //        if (first) {
-        settings.B0 = lmi.evaluate(position);
-        settings.B2 = lmi.evaluateWithoutA0(objectiveFunction);
+        lmi.evaluate(position, settings.B0);
+        lmi.evaluateWithoutA0(objectiveFunction, settings.B2);
 //        }
 
-        settings.B1 = lmi.evaluateWithoutA0(direction);
-        MT B2temp = settings.B2 / (-2*temp);
+        lmi.evaluateWithoutA0(direction, settings.B1);
+        MT B2temp = settings.B2 / (-2 * temp);
 
         // create pencil matrix
-        MT AA(2*matrixDim, 2*matrixDim);
-        MT BB(2*matrixDim, 2*matrixDim);
+        MT AA(2 * matrixDim, 2 * matrixDim);
+        MT BB(2 * matrixDim, 2 * matrixDim);
 
-        BB.block(matrixDim, matrixDim, matrixDim, matrixDim) = -1*settings.B0;
+        BB.block(matrixDim, matrixDim, matrixDim, matrixDim) = -1 * settings.B0;
         BB.block(0, matrixDim, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
         BB.block(matrixDim, 0, matrixDim, matrixDim) = MT::Zero(matrixDim, matrixDim);
         BB.block(0, 0, matrixDim, matrixDim) = B2temp;
@@ -572,7 +723,7 @@ public:
         Spectra::DenseSymMatProd<double> op(AA);
 //        Spectra::SparseRegularInverse<double> Bop(B);
 
-        Spectra::DenseCholesky<double>  Bop(-BB);
+        Spectra::DenseCholesky<double> Bop(-BB);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
 //        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
@@ -629,7 +780,7 @@ public:
         lambdaMinPositive = maxDouble;
         int index = 0;
 
-        for (int i=0 ; i<alphas.rows() ; i++) {
+        for (int i = 0; i < alphas.rows(); i++) {
 
             if (betas(i) == 0 || alphas(i).imag() != 0)  //TODO WARNING do what here?
                 continue;
@@ -641,7 +792,7 @@ public:
                 index = i;
             }
             if (lambda < 0 && lambda > lambdaMaxNegative)
-                lambdaMaxNegative =lambda;
+                lambdaMaxNegative = lambda;
         }
 //        std::cout << lambdaMinPositive << "eval\n";
 
@@ -650,39 +801,40 @@ public:
 
         settings.genEigenvector = Point(matrixDim);
 
-        for (int i = 0 ; i<matrixDim ; i++)
+        for (int i = 0; i < matrixDim; i++)
             settings.genEigenvector.set_coord(i, eivec(matrixDim + i).real());
 
 //        std::cout << eivecs.col(index)<<"evec\n";
         return lambdaMinPositive;
     }
 
-    template <class Point>
-    void compute_reflection(BoundaryOracleBoltzmannHMCSettings<Point>& settings, Point& direction) {
+    template<class Point>
+    void compute_reflection(BoundaryOracleBoltzmannHMCSettings<Point> &settings, Point &direction) {
         std::vector<MT> matrices = lmi.getMatrices();
         int dim = matrices.size();
         settings.gradient = Point(dim);
 
-        for (int i=0 ; i<dim ; i++) {
-            settings.gradient.set_coord(i, settings.genEigenvector.dot((settings.genEigenvector.matrix_left_product(matrices[i]))));
+        for (int i = 0; i < dim; i++) {
+            settings.gradient.set_coord(i, settings.genEigenvector.dot(
+                    (settings.genEigenvector.matrix_left_product(matrices[i]))));
         }
 
         settings.gradient.normalize();
-        settings.gradient = -1*settings.gradient;
+        settings.gradient = -1 * settings.gradient;
 
-        Point t  = ((-2.0 * direction.dot(settings.gradient)) * settings.gradient);
+        Point t = ((-2.0 * direction.dot(settings.gradient)) * settings.gradient);
         direction = t + direction;
-        settings.gradient = -1*settings.gradient;
+        settings.gradient = -1 * settings.gradient;
     }
 
-    void compute_reflection(const VT& genEivector, VT& direction, MT& C) {
+    void compute_reflection(const VT &genEivector, VT &direction, MT &C) {
         VT gradient;
         std::vector<MT> matrices = lmi.getMatrices();
         int dim = matrices.size();
         gradient = VT::Zero(dim);
 
-        for (int i=0 ; i<dim ; i++) {
-            gradient(i) = genEivector.dot((matrices[i])* genEivector);
+        for (int i = 0; i < dim; i++) {
+            gradient(i) = genEivector.dot((matrices[i]) * genEivector);
         }
 
 //        Eigen::SelfAdjointEigenSolver<MT> es;
@@ -705,6 +857,28 @@ public:
 
         gradient = ((-2.0 * direction.dot(gradient)) * gradient);
         direction += gradient;
+    }
+
+    template<class Point>
+    void compute_reflection(const Point &genEivector, Point &direction) {
+
+        auto t1 = std::chrono::steady_clock::now();
+
+        const std::vector<MT> &matrices = lmi.getMatrices();
+        int dim = matrices.size();
+        Point gradient(dim);
+
+        for (int i = 0; i < dim; i++) {
+            gradient.set_coord(i, genEivector.dot(genEivector.matrix_left_product(matrices[i])));
+        }
+
+        gradient = -1 * gradient;
+        gradient.normalize();
+
+        gradient = ((-2.0 * direction.dot(gradient)) * gradient);
+        direction = direction + gradient;
+
+
     }
 };
 

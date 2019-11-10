@@ -27,8 +27,10 @@ typedef optimization::sdp_problem<Point> sdp_problem;
 typedef Eigen::Matrix<NT, Eigen::Dynamic, Eigen::Dynamic> MT;
 typedef Eigen::Matrix<NT, Eigen::Dynamic, 1> VT;
 
-extern int STEPS; //TODO delete this
+extern int STEPS;
 extern int BOUNDARY_CALLS;
+extern double ORACLE_TIME;
+extern double REFLECTION_TIME;
 
 void printHelpMessage();
 
@@ -231,22 +233,26 @@ int main(const int argc, const char **argv) {
         auto t2 = std::chrono::steady_clock::now();
         results.push_back(sdp.solution.second);
         steps.push_back(STEPS);
-        times.push_back(std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count());
+        times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
         oracle_calls.push_back(BOUNDARY_CALLS);
 
+        sdp.printSolution();
+
         if ( std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() < 10000 ) {
-            std::cout << "Computed at " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << " msecs" << std::endl << std::endl;
+            std::cout << "Computed at " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << " msecs" << std::endl ;
         }
         else {
-            std::cout << "Computed at " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << " secs" << std::endl << std::endl;
+            std::cout << "Computed at " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << " secs" << std::endl ;
         }
 //        VT sol = sdp.getSolution();
 //        Point solution(sol);
 //        point.setZero(10);
 //        std::cout <<  sdp.isFeasible(sol)<< "\n";// << sdp.isFeasible(sol)<< " ffffffff\n";
-        sdp.printSolution();
+
         std::cout << "STEPS " << STEPS << "\n";
         std::cout << "BOUNDARY_CALLS " << BOUNDARY_CALLS << "\n";
+        std::cout << "ORACLE_TIME " << ORACLE_TIME << "\n";
+        std::cout << "REFLECTION_TIME " << REFLECTION_TIME << "\n";
     }
 
     double sum = 0;
@@ -277,16 +283,22 @@ int main(const int argc, const char **argv) {
     for (auto x : steps)
         steps_avg += x;
 
-    steps_avg = steps_avg / steps.size();
+    steps_avg = steps_avg /(double)steps.size();
+    int oracles_avg = 0;
+
+    for (auto x : oracle_calls)
+        oracles_avg += x;
+
+    oracles_avg = oracles_avg /(double) oracle_calls.size();
 
     std::cout << std::fixed;
     std::cout << std::setprecision(3);
 
     std::cout << "\nStatistics\n" <<
               "Average result: " << average << "\n"<<
-              "Average time: " << avg_time << "\n" <<
+              "Average time: " << avg_time/1000.0 << "\n" <<
               "Average # Steps: " << steps_avg << "\n" <<
-           "Average # boundary calls: " << BOUNDARY_CALLS << "\n";
+           "Average # boundary calls: " << oracles_avg << "\n";
     return 0;
 }
 

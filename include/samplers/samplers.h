@@ -15,6 +15,8 @@
 #include <cmath>
 
 extern int BOUNDARY_CALLS;
+extern double ORACLE_TIME;
+extern double REFLECTION_TIME;
 
 typedef double NT_MATRIX;
 typedef Eigen::Matrix<NT_MATRIX,Eigen::Dynamic,Eigen::Dynamic> MT;
@@ -784,95 +786,218 @@ void billiard_walk(ConvexBody &P, Point &p, NT che_rad, std::vector<NT> &Ar, std
 }
 
 
+//template <class Point, class Parameters, typename NT>
+//void billiard_walk(Spectrahedron &spectrahedron, Point &p, NT che_rad, MT& LMIatP, Parameters &var, const Point& a, double b, std::list<Point>& randPoints, bool first = true) {
+//
+//    typedef typename Parameters::RNGType RNGType;
+//    unsigned int n = spectrahedron.getLMI().getDim();
+//    RNGType &rng = var.rng;
+//    boost::random::uniform_real_distribution<> urdist(0, 1);
+//    NT T = urdist(rng) * che_rad;
+//    Point v = get_direction<RNGType, Point, NT>(n);
+//    int it = 0;
+//    std::pair<double, bool> pair;
+//    NT lambda_max = 0.0;
+//    MT B;
+//    VT genEivector;
+////    VT pVT = p.getCoefficients();
+//
+////    std::pair<double, double> bpair;
+//
+//    if (first) {
+//
+//        pair = spectrahedron.boundaryOraclePositive(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, LMIatP, B, genEivector, true);
+////        bpair = spectrahedron.boundaryOracleEfficient(pVT, v, a, b);
+//        double lambda = pair.first;
+//
+////        std::cout<<pair.first << " lambda " <<std::endl;
+//        lambda = 0.995 * lambda;
+//        if (lambda == 0)
+//            return;
+//
+//        if (T <= lambda) {
+//            p = (T * v) + p;
+//            LMIatP += T*B;
+////            std::cout<< " =========\n\n\n\n\n\n" <<std::endl;
+//            return;
+//        }
+//
+//        p = (lambda * v) + p;
+//        randPoints.push_back(p);
+//        LMIatP += lambda*B;
+//        T -= lambda;
+//
+//        if (pair.second) {
+//            //we hit the cutting plane
+//            Point reflection = ((-2.0 * v.dot(a)) * a);
+//            v = v + reflection;
+//        }
+//        else
+//            spectrahedron.compute_reflection(genEivector, v);
+//    }
+//
+//    while (it < 10 * n) {
+//
+//        pair = spectrahedron.boundaryOraclePositive(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, LMIatP, B, genEivector, false);
+//
+//        double lambda = pair.first;
+////        std::cout<<pair.first << " lambda " <<std::endl;
+//        lambda = 0.995 * lambda;
+//        if (lambda == 0) {
+//            return;
+//        }
+//
+//        if (T <= lambda) {
+//            p = (T * v) + p;
+//            LMIatP += T*B;
+//            break;
+//        }
+//
+//        p = (lambda * v) + p;
+//        randPoints.push_back(p);
+//
+//        LMIatP += lambda*B;
+//        T -= lambda;
+//
+//        if (pair.second) {
+//            //we hit the cutting plane
+//            Point reflection = ((-2.0 * v.dot(a)) * a);
+//            v = v + reflection;
+//        }
+//        else
+//            spectrahedron.compute_reflection(genEivector, v);
+//
+//        it++;
+//    }
+//}
+
+//template <class Point, class Parameters, typename NT>
+//void billiard_walk(Spectrahedron &spectrahedron, Point &p, NT che_rad, MT& LMIatP, Parameters &var, const Point& a, double b, Point& v, bool first = true) {
+//
+//    typedef typename Parameters::RNGType RNGType;
+//    unsigned int n = spectrahedron.getLMI().getDim();
+//    RNGType &rng = var.rng;
+//    boost::random::uniform_real_distribution<> urdist(0, 1);
+//    NT T = urdist(rng) * che_rad;
+//    int it = 0;
+//    std::pair<double, bool> pair;
+//    NT lambda_max = 0.0;
+//    MT B;
+//    VT genEivector;
+////    VT pVT = p.getCoefficients();
+//
+////    std::pair<double, double> bpair;
+//
+//    if (first) {
+//
+//        pair = spectrahedron.boundaryOraclePositive(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, LMIatP, B, genEivector, true);
+////        bpair = spectrahedron.boundaryOracleEfficient(pVT, v, a, b);
+//        double lambda = pair.first;
+//
+////        std::cout<<pair.first << " vs " << bpair.first<<std::endl;
+//        lambda = 0.995 * lambda;
+//        if (lambda == 0)
+//            return;
+//
+//        if (T <= lambda) {
+//            p = (T * v) + p;
+//            LMIatP += T*B;
+////            std::cout<< " =========\n\n\n\n\n\n" <<std::endl;
+//            return;
+//        }
+//
+//        p = (lambda * v) + p;
+//        LMIatP += lambda*B;
+//        T -= lambda;
+//
+//        if (pair.second) {
+//            //we hit the cutting plane
+//            Point reflection = ((-2.0 * v.dot(a)) * a);
+//            v = v + reflection;
+//        }
+//        else
+//            spectrahedron.compute_reflection(genEivector, v);
+//    }
+//
+//    while (it < 10 * n) {
+//
+//        pair = spectrahedron.boundaryOraclePositive(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, LMIatP, B, genEivector, false);
+//
+//        double lambda = pair.first;
+//
+//        lambda = 0.995 * lambda;
+//        if (lambda == 0) {
+//            return;
+//        }
+//
+//        if (T <= lambda) {
+//            p = (T * v) + p;
+//            LMIatP += T*B;
+//            break;
+//        }
+//
+//        p = (lambda * v) + p;
+//
+//        LMIatP += lambda*B;
+//        T -= lambda;
+//
+//        if (pair.second) {
+//            //we hit the cutting plane
+//            Point reflection = ((-2.0 * v.dot(a)) * a);
+//            v = v + reflection;
+//        }
+//        else
+//            spectrahedron.compute_reflection(genEivector, v);
+//
+//        it++;
+//    }
+//}
+
+
 template <class Point, class Parameters, typename NT>
-void billiard_walk(Spectrahedron &spectrahedron, Point &p, NT che_rad, MT& LMIatP, Parameters &var, const VT& a, double b, bool first = true) {
+void billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Parameters &var, const Point& a, const double& b,Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings) {
 
     typedef typename Parameters::RNGType RNGType;
     unsigned int n = spectrahedron.getLMI().getDim();
     RNGType &rng = var.rng;
     boost::random::uniform_real_distribution<> urdist(0, 1);
     NT T = urdist(rng) * che_rad;
-    VT v = get_direction<RNGType, Point, NT>(n).getCoefficients();
+    Point v = get_direction<RNGType, Point, NT>(n);
     int it = 0;
     std::pair<double, bool> pair;
-    NT lambda_max = 0.0;
-    MT B;
-    VT genEivector;
-    VT pVT = p.getCoefficients();
-
-//    std::pair<double, double> bpair;
-
-if (first) {
-
-        pair = spectrahedron.boundaryOraclePositive(pVT, v, a, b, LMIatP, B, genEivector, true);
-//        bpair = spectrahedron.boundaryOracleEfficient(pVT, v, a, b);
-        double lambda = pair.first;
-        MT C = LMIatP + (lambda*B);
-
-//        std::cout<<pair.first << " vs " << bpair.first<<std::endl;
-        lambda = 0.995 * lambda;
-        if (lambda == 0)
-            return;
-
-        if (T <= lambda) {
-            pVT = (T * v) + pVT;
-            p = Point(pVT);
-            LMIatP += T*B;
-//            std::cout<< " =========\n\n\n\n\n\n" <<std::endl;
-            return;
-        }
-
-        pVT = (lambda * v) + pVT;
-        LMIatP += lambda*B;
-        T -= lambda;
-
-        if (pair.second) {
-            //we hit the cutting plane
-            VT reflection = ((-2.0 * v.dot(a)) * a);
-            v += reflection;
-        }
-        else
-            spectrahedron.compute_reflection(genEivector, v, C);
-
-
-    }
 
     while (it < 10 * n) {
 
-        pair = spectrahedron.boundaryOraclePositive(pVT, v, a, b, LMIatP, B, genEivector, false);
-//        bpair = spectrahedron.boundaryOracleEfficient(pVT, v, a, b);
+        pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, settings);
+
         double lambda = pair.first;
-        MT C = LMIatP + (lambda*B);
-//        std::cout<<pair.first << " vs " << bpair.first << " reflections" <<std::endl;
-        lambda = 0.995 * lambda;
+
         if (lambda == 0) {
-            p = Point(pVT);
             return;
         }
 
+        lambda = 0.995 * lambda;
+
         if (T <= lambda) {
-            pVT = (T * v) + pVT;
-            LMIatP += T*B;
+            p = (T * v) + p;
+            settings.LMIatP.noalias() += T*settings.B;
             break;
         }
 
-        pVT = (lambda * v) + pVT;
-        LMIatP += lambda*B;
+        p = (lambda * v) + p;
+        settings.LMIatP.noalias() += lambda*settings.B;
         T -= lambda;
 
         if (pair.second) {
             //we hit the cutting plane
-            VT reflection = ((-2.0 * v.dot(a)) * a);
-            v += reflection;
+            Point reflection = ((-2.0 * v.dot(a)) * a);
+            v = v + reflection;
         }
         else
-            spectrahedron.compute_reflection(genEivector, v, C);
+            spectrahedron.compute_reflection(settings.genEigenvector, v);
 
         it++;
     }
-
-//    std::cout<< " =========\n\n\n\n\n\n" <<std::endl;
-    p = Point(pVT);
 }
 
 template <class Point, class Parameters, typename NT>

@@ -29,12 +29,12 @@ public:
 
     point() {}
 
-    point(const unsigned int dim) {
+    point(const unsigned int& dim) {
         d = dim;
         coeffs.setZero(d);
     }
 
-    point(Coeff coeffs) {
+    point(const Coeff& coeffs) {
         d = coeffs.rows();
         this->coeffs = coeffs;
     }
@@ -52,7 +52,7 @@ public:
         return coeffs;
     }
 
-    int dimension() {
+    int dimension() const {
         return d;
     }
 
@@ -64,7 +64,7 @@ public:
         coeffs(i) = coord;
     }
 
-    FT operator[] (const unsigned int i) {
+    FT operator[] (const unsigned int& i) const {
         return coeffs(i);
     }
 
@@ -75,11 +75,11 @@ public:
         return temp;
     }
 
-    void add(Coeff coeffs) {
+    void add(const Coeff& coeffs) {
         this->coeffs = coeffs + this->coeffs;
     }
 
-    point operator- (point& p) const{
+    point operator- (const point& p) const{
         point temp;
         temp.d = d;
         temp.coeffs = coeffs - p.getCoefficients();
@@ -100,7 +100,7 @@ public:
         return temp;
     }
 
-    bool operator== (point& p) const{//TODO check dim?
+    bool operator== (const point& p) const{//TODO check dim?
         int i=0;
 
         for (i=0 ; i<d ; i++) {
@@ -111,12 +111,12 @@ public:
     }
 
 
-    FT dot(const point& p){
+    FT dot(const point& p) const{
         return coeffs.dot(p.getCoefficients());
     }
 
-    point matrix_left_product(const MT& matrix) {
-        return point(matrix * coeffs);
+    point matrix_left_product(const Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic>& matrix) const {
+        return point(matrix* coeffs);
     }
 
     void normalize() {
@@ -156,7 +156,7 @@ public:
 };
 
 template<class K>
-point<K> operator* (const typename K::FT& k, point<K>& p) {
+point<K> operator* (const typename K::FT& k, const point<K>& p) {
     return p * k;
 }
 
