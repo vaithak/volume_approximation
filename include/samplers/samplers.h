@@ -549,6 +549,33 @@ void hit_and_run(Point& point,
 }
 
 template <class Point, class Parameters>
+void hit_and_run_coord_update(Point &p,
+                              Spectrahedron &spectrahedron,
+                              const unsigned int& rand_coord,
+                              const Point& a,
+                              const double & b,
+                              Parameters &var,
+                              Spectrahedron::BoundaryOracleCDHRSettings<Point>& settings,
+                              double& returnLambda) {
+    std::pair<double, double> bpair = spectrahedron.boundaryOracleCDHR<Point> (p.getCoefficients(), rand_coord, a.getCoefficients(), b, settings);
+
+    if (bpair.first == 0 && bpair.second == 0) {
+        returnLambda = 0;
+        return;
+    }
+
+    typedef typename Parameters::RNGType RNGType;
+    boost::random::uniform_real_distribution<> urdist(0, 1);
+    RNGType &rng = var.rng;
+    double kapa = urdist(rng);
+
+    returnLambda = bpair.first + kapa * (bpair.second - bpair.first);
+
+    settings.LMIatP.noalias() += returnLambda * spectrahedron.getLMI().getMatrices()[rand_coord];
+    p.set_coord(rand_coord, p[rand_coord] + returnLambda);
+}
+
+template <class Point, class Parameters>
 void hit_and_run_sampled_covariance_matrix(Point& point,
                  Spectrahedron &spectrahedron,
                  Parameters &var,
@@ -955,7 +982,7 @@ void billiard_walk(ConvexBody &P, Point &p, NT che_rad, std::vector<NT> &Ar, std
 
 
 template <class Point, class Parameters, typename NT>
-void billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Parameters &var, const Point& a, const double& b,Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings) {
+double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Parameters &var, const Point& a, const double& b,Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings) {
 
     typedef typename Parameters::RNGType RNGType;
     unsigned int n = spectrahedron.getLMI().getDim();
@@ -963,41 +990,49 @@ void billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Pa
     boost::random::uniform_real_distribution<> urdist(0, 1);
     NT T = urdist(rng) * che_rad;
     Point v = get_direction<RNGType, Point, NT>(n);
-    int it = 0;
+    double it = 0;
     std::pair<double, bool> pair;
+    double factor = 1.5;
 
-    while (it < 10 * n) {
+    while (it < factor*n) {//1.5
 
         pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, settings);
 
         double lambda = pair.first;
 
         if (lambda == 0) {
-            return;
+            return it;
         }
+
+        it++;
 
         lambda = 0.995 * lambda;
 
         if (T <= lambda) {
-            p = (T * v) + p;
+            p += (T * v);
             settings.LMIatP.noalias() += T*settings.B;
+
             break;
         }
 
-        p = (lambda * v) + p;
+        p += (lambda * v);
         settings.LMIatP.noalias() += lambda*settings.B;
         T -= lambda;
+
+        if (it >= factor*n)
+            break;
 
         if (pair.second) {
             //we hit the cutting plane
             Point reflection = ((-2.0 * v.dot(a)) * a);
-            v = v + reflection;
+            v += reflection;
         }
         else
             spectrahedron.compute_reflection(settings.genEigenvector, v);
 
-        it++;
     }
+
+    return it;
 }
 
 template <class Point, class Parameters, typename NT>

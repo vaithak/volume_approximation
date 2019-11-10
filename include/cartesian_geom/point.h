@@ -79,6 +79,22 @@ public:
         this->coeffs = coeffs + this->coeffs;
     }
 
+    void operator+= (const point& p)  {
+        this->coeffs += p.coeffs;
+    }
+
+    void operator*= (const FT& k)  {
+        this->coeffs *= k;
+    }
+
+    void operator/= (const FT& k)  {
+        this->coeffs /= k;
+    }
+
+    void operator-= (const point& p)  {
+        this->coeffs -= p.coeffs;
+    }
+
     point operator- (const point& p) const{
         point temp;
         temp.d = d;
@@ -119,8 +135,10 @@ public:
         return point(matrix* coeffs);
     }
 
-    void normalize() {
+    double normalize() {
+        double norm = coeffs.norm();
         this->coeffs.normalize();
+        return norm;
     }
 
     FT squared_length() {

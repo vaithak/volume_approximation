@@ -33,6 +33,8 @@ class LMI {
     // the matrices A_i, i>0
     std::vector<MT> matrices;
     MT_ROWMAJOR vectorMatrix;
+    MT_ROWMAJOR gradientMatrix;
+    VT a;
     typedef std::vector<MT>::iterator Iter;
 
 public:
@@ -44,6 +46,7 @@ public:
             this->matrices.push_back(matrices[i]);
         }
 
+        setGradientMatrix();
         setVectorMatrix();
     }
 
@@ -51,6 +54,7 @@ public:
         this->A0 = lmi.A0;
         this->matrices = lmi.matrices;
         setVectorMatrix();
+        setGradientMatrix();
     }
 
     /**
@@ -70,12 +74,8 @@ public:
     }
 
     void evaluate_revised(const VT &x, MT &res) {
-        res.setConstant(0);
+        evaluateWithoutA0_revised(x, res);
         res += A0;
-        int i = 0;
-
-        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
-            res.noalias() += x(i) * (*iter);
     }
 
 
@@ -256,7 +256,7 @@ public:
 
         long dim = A0.rows();
 
-        VT a = vectorMatrix * x;
+        a = vectorMatrix * x;
 
         double *data = res.data();
         double *v = a.data();
@@ -291,6 +291,8 @@ public:
         int dim = getMatricesDim();
         int newDim = dim * (dim + 1) / 2;
 
+        a.resize(newDim);
+
         vectorMatrix.resize(newDim, getDim());
 
         int atMatrix = 0;
@@ -307,21 +309,22 @@ public:
 
     }
 
-    void evaluateWithoutA0_revised2(const VT &x, MT &res) {
-        int i = 0;
+    void setGradientMatrix() {
+        int m = getMatricesDim();
+        int d = getDim();
 
-        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
-            res.noalias() += x(i) * (*iter);
+        gradientMatrix.resize(d*m, m);
+        int atMatrix = 0;
+
+        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, atMatrix++) {
+            gradientMatrix.block(atMatrix*m,0,m,m) = matrices[atMatrix];
+
+        }
+
     }
 
-    void evaluateWithoutA0(const VT &x, Eigen::TriangularView<MT, Eigen::Upper> &res) {
-        long dim = A0.rows();
-
-        res = MT::Zero(dim, dim);
-        int i = 0;
-
-        for (Iter iter = matrices.begin(); iter != matrices.end(); iter++, i++)
-            res += x(i) * (*iter);
+    const MT_ROWMAJOR &getGradientMatrix() const {
+        return gradientMatrix;
     }
 
     const MT &getAi(int i) const {
@@ -366,7 +369,7 @@ class Spectrahedron {
      * inequality describing the spectrahedron
      */
     LMI lmi;
-
+    VT U;//for computing gradient
     double maxDouble = std::numeric_limits<double>::max();
     double minDouble = std::numeric_limits<double>::lowest();
 
@@ -377,10 +380,12 @@ public:
     Spectrahedron(const Spectrahedron &spectrahedron) {
         LMI lmi;
         this->lmi = LMI(spectrahedron.getLMI());
+        U.resize(lmi.getDim()*lmi.getMatricesDim());
     }
 
     Spectrahedron(LMI &lmi) {
         this->lmi = lmi;
+        U.resize(lmi.getDim()*lmi.getMatricesDim());
     }
 
     const LMI &getLMI() const {
@@ -561,6 +566,93 @@ public:
     }
 
     template<class Point>
+    class BoundaryOracleCDHRSettings {
+    public:
+        MT LMIatP;
+        double max_segment_length;
+        bool first; //true if first call of the boundary oracle
+        bool hasCuttingPlane;
+
+        BoundaryOracleCDHRSettings(const int& dim) {
+            LMIatP.resize(dim, dim);
+            first = true;
+            max_segment_length = 0;
+            hasCuttingPlane = false;
+        }
+
+        void setMaxSegmentLength(double minLambdaPositive, double maxLambdaNegative) {
+            double lambda = minLambdaPositive - maxLambdaNegative;
+
+            if (lambda > max_segment_length)
+                max_segment_length = lambda;
+        }
+
+        void resetMaxSegmentLength() {
+            max_segment_length = 0;
+        }
+
+        double maxSegmentLength() {
+            return max_segment_length;
+        }
+    };
+
+    template<class Point>
+    std::pair<double, double>
+    boundaryOracleCDHR(const VT &position, const int& coordinate, const VT &a, const double &b,
+                           BoundaryOracleCDHRSettings<Point> &settings) {
+
+        if (settings.first) {
+            lmi.evaluate_revised(position, settings.LMIatP);
+        }
+
+        // Construct matrix operation object using the wrapper classes
+
+        Spectra::DenseSymMatProd<double> op(lmi.getMatrices()[coordinate]);
+        Spectra::DenseCholesky<double> Bop(-settings.LMIatP);
+
+        // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
+        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
+                geigs(&op, &Bop, 2, 15);
+
+        // Initialize and compute
+        geigs.init();
+        int nconv = geigs.compute();
+
+
+        // Retrieve results
+        Eigen::VectorXd evalues;
+        Eigen::MatrixXd evecs;
+
+        if (geigs.info() == Spectra::SUCCESSFUL) {
+            evalues = geigs.eigenvalues();
+            evecs = geigs.eigenvectors();
+        }
+
+        double lambdaMinPositive, lambdaMaxNegative;
+
+        if (nconv == 2) {
+            lambdaMinPositive = 1 / evalues(0);
+            lambdaMaxNegative = 1 / evalues(1);
+        } else {
+            return {0,0};
+        }
+
+        if (settings.hasCuttingPlane) {
+            // check the cutting plane
+            double lambda = (b - a.dot(position)) / a[coordinate];
+
+            if (lambda > 0 && lambda < lambdaMinPositive)
+                lambdaMinPositive = lambda;
+            if (lambda < 0 && lambda > lambdaMaxNegative)
+                lambdaMaxNegative = lambda;
+        }
+
+        settings.setMaxSegmentLength(lambdaMinPositive, lambdaMaxNegative);
+
+        return {lambdaMinPositive, lambdaMaxNegative};
+    }
+
+    template<class Point>
     class BoundaryOracleBilliardSettings {
     public:
         MT B, LMIatP;
@@ -568,8 +660,10 @@ public:
         double max_segment_length;
         bool first; //true if first call of the boundary oracle
 
-        BoundaryOracleBilliardSettings() {
+        BoundaryOracleBilliardSettings(int dim) {
             first = true;
+            LMIatP.resize(dim, dim);
+            B.resize(dim, dim);
             max_segment_length = 0;
         }
 
@@ -593,14 +687,10 @@ public:
                            BoundaryOracleBilliardSettings<Point> &settings) {
 
         if (settings.first) {
-            int dim = lmi.getMatricesDim();
-            settings.LMIatP.resize(dim, dim);
             lmi.evaluate_revised(position, settings.LMIatP);
-            settings.B.resize(dim, dim);
         }
 
         BOUNDARY_CALLS++;
-//        if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
 
         lmi.evaluateWithoutA0_revised(direction, settings.B);
 
@@ -862,21 +952,26 @@ public:
     template<class Point>
     void compute_reflection(const Point &genEivector, Point &direction) {
 
-        auto t1 = std::chrono::steady_clock::now();
+//        auto t1 = std::chrono::steady_clock::now();
 
-        const std::vector<MT> &matrices = lmi.getMatrices();
-        int dim = matrices.size();
-        Point gradient(dim);
+//        const std::vector<MT> &matrices = lmi.getMatrices();
+        int d = getLMI().getDim();
+        int m = lmi.getMatricesDim();
+        const VT& coeffs = genEivector.getCoefficients();
 
-        for (int i = 0; i < dim; i++) {
-            gradient.set_coord(i, genEivector.dot(genEivector.matrix_left_product(matrices[i])));
+        U.noalias() = lmi.getGradientMatrix() * coeffs;
+        Point gradient(d);
+
+        for (int i = 0; i < d; i++) {
+//            gradient.set_coord(i, genEivector.dot(genEivector.matrix_left_product(matrices[i])));
+            gradient.set_coord(i, U.segment(i*m,m).dot(coeffs));
         }
 
         gradient = -1 * gradient;
         gradient.normalize();
 
-        gradient = ((-2.0 * direction.dot(gradient)) * gradient);
-        direction = direction + gradient;
+        gradient *= (-2.0 * direction.dot(gradient));
+        direction += gradient;
 
 
     }

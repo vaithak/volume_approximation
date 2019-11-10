@@ -771,6 +771,60 @@ namespace optimization {
         checkNewMin(minInList.dot(objectiveFunction), minInList, min1, minP1, min2, minP2);
     }
 
+
+    template<class Parameters, class Point>
+    std::pair<Point, Point> min_rand_point_generator_cdhr(Spectrahedron &spectrahedron,
+                                                              const Point& objectiveFunction,
+                                                              Point &p,   // a point to start
+                                                              const unsigned int& rnum,
+                                                              const Point& a,
+                                                              const double& b,
+                                                              Parameters &var,
+                                                              Spectrahedron::BoundaryOracleCDHRSettings<Point>& settings)  // constants for volume
+    {
+
+        typedef typename Parameters::RNGType RNGType;
+        typedef typename Point::FT NT;
+
+        RNGType &rng = var.rng;
+        boost::random::uniform_int_distribution<> uidist(0, spectrahedron.getLMI().getDim() - 1);
+
+        Point minP1, minP2;
+        double lambda;
+
+        hit_and_run_coord_update(p, spectrahedron, uidist(rng), a, b, var, settings, lambda);
+        settings.first = false;
+        minP1 = p;
+        hit_and_run_coord_update(p, spectrahedron, uidist(rng), a, b, var, settings, lambda);
+        minP2 = p;
+
+        NT min1 = minP1.dot(objectiveFunction);
+        NT min2 = minP2.dot(objectiveFunction);
+
+        if (min1 > min2) {
+            std::swap(min1, min2);
+            std::swap(minP1, minP2);
+        }
+
+        double currentProduct = p.dot(objectiveFunction);
+
+        for (unsigned int i = 3; i <= rnum ; ++i) {
+
+            int coord = uidist(rng);
+            hit_and_run_coord_update(p, spectrahedron, coord, a, b, var, settings, lambda);
+            currentProduct += objectiveFunction[coord] * lambda;
+
+            checkNewMin(currentProduct, p, min1, minP1, min2, minP2);
+
+        } /*  for (unsigned int i = 1; i <= rnum ; ++i)  */
+
+        p = 0.5*minP1 + 0.5*minP2;// + _p2 + _p3;
+        settings.first = true;
+
+        return std::pair<Point, Point>(minP1, minP2);
+    }
+
+
     template<class Parameters, class Point>
     std::pair<Point, Point> min_rand_point_generator_billiard(Spectrahedron &spectrahedron,
                                                               Point& objectiveFunction,
@@ -780,17 +834,32 @@ namespace optimization {
                                                               const double& b,
                                                               Parameters &var,
                                                               double diameter,
-                                                              Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings)  // constants for volume
+                                                              Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings)
     {
 
         typedef typename Parameters::RNGType RNGType;
         typedef typename Point::FT NT;
 
-        std::list<Point> intermediateBilliardPoints;
+//        std::list<Point> intermediateBilliardPoints;
 
         Point minP1, minP2;
+
+        if (rnum == 1) {
+            while (billiard_walk(spectrahedron, p, 1.5*diameter,  var, a, b, settings) < 1);
+            settings.first = false;
+            double lambda = 0.005;
+            std::pair<double, bool> pair;
+            pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), objectiveFunction.getCoefficients(), a.getCoefficients(), b, settings);
+            minP1 = p;
+            minP2 = p + pair.first*lambda*objectiveFunction;
+//            p = 0.5*minP1 + 0.5*minP2;// + _p2 + _p3;
+            settings.first = true;
+            return std::pair<Point, Point>(minP1, minP2);
+        }
+
         billiard_walk(spectrahedron, p, diameter,  var, a, b, settings);
         settings.first = false;
+
         minP1 = p;
         billiard_walk(spectrahedron, p, diameter,  var, a, b, settings);
         minP2 = p;
@@ -830,9 +899,12 @@ namespace optimization {
     }
 
     template <class Point>
-    double getDiameterLength(const Point& p1, const Point& p2, double maxSegmentLength) {
+    double getDiameterLength(const Point& p1, const Point& p2, double maxSegmentLength, double diameter) {
         double distance = euclideanDistance(p1, p2);
         double retVal = maxSegmentLength > distance ? maxSegmentLength : distance;
+        if (retVal < diameter)
+            retVal = diameter;
+
         return (1.5 + (double) pow((double)p1.dimension(), 0.25) / 5) * retVal;
     }
 
@@ -848,43 +920,59 @@ namespace optimization {
         int dim = objectiveFunction.dimension();
         BOUNDARY_CALLS = ORACLE_TIME = REFLECTION_TIME = 0;
 
-        SlidingWindow slidingWindow(5 + sqrt(dim));
+        SlidingWindow slidingWindow(6 + sqrt(dim));
+        SlidingWindow changeWindow(3 + pow(dim,0.25));
+
         std::pair<Point, Point> minimizingPoints;
-        Spectrahedron::BoundaryOracleBilliardSettings<Point> settings;
+        Spectrahedron::BoundaryOracleBilliardSettings<Point> billiardSettings(spectrahedron.getLMI().getMatricesDim());
+        Spectrahedron::BoundaryOracleCDHRSettings<Point> cdhrSettings(spectrahedron.getLMI().getMatricesDim());
+
+        //prepare cutting plane
+        Point a = objectiveFunction;
+        double a_norm = a.normalize();
+        double b;
+        double diameter;
 
         // get an internal point so you can sample
         Point interiorPoint = initial;
-        minimizingPoints = min_rand_point_generator_spectrahedron(spectrahedron, objectiveFunction.getCoefficients(), interiorPoint, rnum, parameters);
+        minimizingPoints = min_rand_point_generator_cdhr(spectrahedron, objectiveFunction, interiorPoint, 2*dim, a, b, parameters, cdhrSettings);
 
         NT min = objectiveFunction.dot(minimizingPoints.second);
         slidingWindow.push(min);
+        changeWindow.push(min);
 
-        VT aa  = objectiveFunction.getCoefficients();
-        double a_norm = aa.norm();
-        aa.normalize();
-        Point a(aa);
-        double b = objectiveFunction.dot(minimizingPoints.second) / a_norm;
-        double diameter;
+        b = objectiveFunction.dot(minimizingPoints.second) / a_norm;
+        cdhrSettings.hasCuttingPlane = true;
 
-        Point previousMinimizingSecond = initial;
+
+        Point previousMinimizingSecond;
+        diameter = cdhrSettings.maxSegmentLength();
 
         do {
-            diameter = getDiameterLength(previousMinimizingSecond, minimizingPoints.first, settings.maxSegmentLength());
-
             previousMinimizingSecond = minimizingPoints.second;
 
             // find where to cut the polytope
-            settings.resetMaxSegmentLength();
-            minimizingPoints = min_rand_point_generator_billiard(spectrahedron, objectiveFunction, interiorPoint, rnum, a, b, parameters, diameter, settings);
+
+            cdhrSettings.resetMaxSegmentLength();
+
+//            if (changeWindow.getRelativeError() > 0.005) {
+//                minimizingPoints = min_rand_point_generator_cdhr(spectrahedron, objectiveFunction, interiorPoint, 1.5*dim, a, b, parameters, cdhrSettings);
+//            }
+//            else {
+                billiardSettings.resetMaxSegmentLength();
+                minimizingPoints = min_rand_point_generator_billiard(spectrahedron, objectiveFunction, interiorPoint, rnum, a, b, parameters, diameter, billiardSettings);
+//            }
 
             min = objectiveFunction.dot(minimizingPoints.second);
             b = min/a_norm;
 
             slidingWindow.push(min);
+            changeWindow.push(min);
 
             if (slidingWindow.getRelativeError() < error)
                 break;
 
+            diameter = getDiameterLength(previousMinimizingSecond, minimizingPoints.first, billiardSettings.maxSegmentLength(), cdhrSettings.maxSegmentLength());
             step++;
         } while (step <= maxSteps || tillConvergence);
 
