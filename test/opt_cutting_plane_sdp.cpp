@@ -296,6 +296,7 @@ int main(const int argc, const char **argv) {
 
     std::cout << "\nStatistics\n" <<
               "Average result: " << average << "\n"<<
+               "Variance: " << variance << "\n"<<
               "Average time: " << avg_time/1000.0 << "\n" <<
               "Average # Steps: " << steps_avg << "\n" <<
            "Average # boundary calls: " << oracles_avg << "\n";

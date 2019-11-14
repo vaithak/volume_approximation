@@ -612,7 +612,7 @@ public:
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
         Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
-                geigs(&op, &Bop, 2, 15);
+                geigs(&op, &Bop, 2, 15 < lmi.getMatricesDim() ? 15 : lmi.getMatricesDim());
 
         // Initialize and compute
         geigs.init();
@@ -636,6 +636,12 @@ public:
         } else {
             return {0,0};
         }
+
+        if (lambdaMinPositive < 0)
+            throw("Unbounded");
+
+        if (lambdaMaxNegative > 0 || (lambdaMaxNegative == 0 && lambdaMinPositive ==0))
+            throw("Unbounded");
 
         if (settings.hasCuttingPlane) {
             // check the cutting plane
@@ -702,7 +708,7 @@ public:
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
         Spectra::SymGEigsSolver<double, Spectra::LARGEST_ALGE, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
-                geigs(&op, &Bop, 1, 15);
+                geigs(&op, &Bop, 1, 15 < lmi.getMatricesDim() ? 15 : lmi.getMatricesDim());
 
         // Initialize and compute
         geigs.init();
@@ -725,6 +731,8 @@ public:
 
         if (nconv == 1) {
             lambdaMinPositive = 1 / evalues(0);
+            if (lambdaMinPositive < 0)
+                throw("Unbounded");
             settings.genEigenvector = Point(evecs.col(0));
         } else {
             lambdaMinPositive = 0;
