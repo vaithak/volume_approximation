@@ -79,7 +79,7 @@ Point get_point_on_Dsphere(unsigned int dim, NT radius){
  * Boender et al. (1991)
  */
 template <class RNGType, class Point, typename NT, class Parameters>
-void rsab_get_direction(const unsigned int& dim, Point& normal, Point& direction, Parameters& var) {
+void rsab_get_direction(const unsigned int& dim, const Point& normal, Point& direction, Parameters& var) {
     RNGType &rng = var.rng;
     boost::random::uniform_real_distribution<> urdist(0, 1);
 
@@ -91,8 +91,8 @@ void rsab_get_direction(const unsigned int& dim, Point& normal, Point& direction
     NT cd = direction.dot(normal);
     NT fd = r / sqrt(1 - cd * cd);
     NT fc = -(r * cd / sqrt(1 - cd * cd) + sqrt(1 - r * r));
-    direction = fd * direction;
-    direction = direction + fc * normal;
+    direction *= fd ;
+    direction += fc * normal;
     direction.normalize();
 }
 
@@ -982,21 +982,27 @@ void billiard_walk(ConvexBody &P, Point &p, NT che_rad, std::vector<NT> &Ar, std
 
 
 template <class Point, class Parameters, typename NT>
-double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Parameters &var, const Point& a, const double& b,Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings) {
+double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Parameters &var, const Point& a, const double& b,Spectrahedron::BoundaryOracleBilliardSettings<Point>& settings, bool shake_and_bake_directions = false) {
 
     typedef typename Parameters::RNGType RNGType;
     unsigned int n = spectrahedron.getLMI().getDim();
     RNGType &rng = var.rng;
     boost::random::uniform_real_distribution<> urdist(0, 1);
     NT T = urdist(rng) * che_rad;
-    Point v = get_direction<RNGType, Point, NT>(n);
+    Point v;
+
+    if (!shake_and_bake_directions)
+        v = get_direction<RNGType, Point, NT>(n);
+    else
+        rsab_get_direction<RNGType, Point, NT, Parameters> (n,a,v,var);
+
     double it = 0;
     std::pair<double, bool> pair;
     double factor = 1.5;
 
     while (it < factor*n) {//1.5
 
-        pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, settings);
+        pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, settings, it != 0 && shake_and_bake_directions);
 
         double lambda = pair.first;
 
@@ -1024,8 +1030,7 @@ double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, 
 
         if (pair.second) {
             //we hit the cutting plane
-            Point reflection = ((-2.0 * v.dot(a)) * a);
-            v += reflection;
+            v += ((-2.0 * v.dot(a)) * a);
         }
         else
             spectrahedron.compute_reflection(settings.genEigenvector, v);

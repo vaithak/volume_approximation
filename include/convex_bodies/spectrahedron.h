@@ -690,7 +690,7 @@ public:
     template<class Point>
     std::pair<double, bool>
     boundaryOracleBilliard(const VT &position, const VT &direction, const VT &a, const double &b,
-                           BoundaryOracleBilliardSettings<Point> &settings) {
+                           BoundaryOracleBilliardSettings<Point> &settings, bool check_cutting_plane = true) {
 
         if (settings.first) {
             lmi.evaluate_revised(position, settings.LMIatP);
@@ -740,11 +740,14 @@ public:
 
         // check the cutting plane
         bool hitCuttingPlane = false;
-        double lambda = (b - a.dot(position)) / a.dot(direction);
 
-        if (lambda > 0 && lambda < lambdaMinPositive) {
-            lambdaMinPositive = lambda;
-            hitCuttingPlane = true;
+        if (check_cutting_plane) {
+            double lambda = (b - a.dot(position)) / a.dot(direction);
+
+            if (lambda > 0 && lambda < lambdaMinPositive) {
+                lambdaMinPositive = lambda;
+                hitCuttingPlane = true;
+            }
         }
 
         settings.setMaxSegmentLength(lambdaMinPositive);

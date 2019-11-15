@@ -845,16 +845,16 @@ namespace optimization {
         Point minP1, minP2;
 
         if (rnum == 1) {
-            while (billiard_walk(spectrahedron, p, 1.5*diameter,  var, a, b, settings) < 1);
-            settings.first = false;
-            double lambda = 0.005;
-            std::pair<double, bool> pair;
-            pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), objectiveFunction.getCoefficients(), a.getCoefficients(), b, settings);
-            minP1 = p;
-            minP2 = p + pair.first*lambda*objectiveFunction;
+            while (billiard_walk(spectrahedron, p, 1.5*diameter,  var, a, b, settings, true) < 1);
+//            settings.first = false;
+//            double lambda = 0.005;
+//            std::pair<double, bool> pair;
+//            pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), objectiveFunction.getCoefficients(), a.getCoefficients(), b, settings);
+//            minP1 = p;
+//            minP2 = p + pair.first*lambda*objectiveFunction;
 //            p = 0.5*minP1 + 0.5*minP2;// + _p2 + _p3;
             settings.first = true;
-            return std::pair<Point, Point>(minP1, minP2);
+            return std::pair<Point, Point>(p, p);
         }
 
         billiard_walk(spectrahedron, p, diameter,  var, a, b, settings);
@@ -935,7 +935,7 @@ namespace optimization {
 
         // get an internal point so you can sample
         Point interiorPoint = initial;
-        minimizingPoints = min_rand_point_generator_cdhr(spectrahedron, objectiveFunction, interiorPoint, 2*dim, a, b, parameters, cdhrSettings);
+        minimizingPoints = min_rand_point_generator_cdhr(spectrahedron, objectiveFunction, interiorPoint, 2*dim + 10, a, b, parameters, cdhrSettings);
 
         NT min = objectiveFunction.dot(minimizingPoints.second);
         slidingWindow.push(min);
