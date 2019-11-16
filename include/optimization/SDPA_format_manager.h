@@ -109,8 +109,17 @@ namespace SDPAFormat {
         //read constant vector
         listVector constantVector = readVector(line);
 
-        if (constantVector.size() != variablesNum)
-            throw 1;
+        while  (constantVector.size() < variablesNum) {
+            if (std::getline(is, line, '\n').eof())
+                throw 1;
+            listVector t = readVector(line);
+            constantVector.insert(std::end(constantVector), std::begin(t), std::end(t));
+        }
+
+//        for (auto x : constantVector)
+//            std::cout << x << "  ";
+//        std::cout << "\n";
+//            throw 1;
 
 
         std::vector<MT> matrices(variablesNum + 1);
@@ -139,6 +148,7 @@ namespace SDPAFormat {
 
                         for (double value : vec) {
                             matrix(offset + i, offset + j) = value;
+//                            std::cout <<value << " val\n";
                             at++;
                             if (at % (int) blockSize == 0) { // new row
                                 i++;

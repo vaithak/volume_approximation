@@ -853,7 +853,7 @@ namespace optimization {
 //            minP1 = p;
 //            minP2 = p + pair.first*lambda*objectiveFunction;
 //            p = 0.5*minP1 + 0.5*minP2;// + _p2 + _p3;
-            settings.first = true;
+//            settings.first = true;
             return std::pair<Point, Point>(p, p);
         }
 

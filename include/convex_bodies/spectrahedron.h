@@ -13,6 +13,8 @@
 #include <Eigen/Eigen>
 #include <chrono>
 #include <limits>
+#include <optimization/SpectraLU.h>
+#include "SpectraLU.h"
 
 const double ZERO = 0.0000000001;
 double ORACLE_TIME;
@@ -103,7 +105,7 @@ public:
         Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivals = solver.eigenvalues();
 
         for (int i = 0; i < eivals.rows(); i++)
-            if (abs(eivals(i).real()) <= abs(approx))
+            if (fabs(eivals(i).real()) <= fabs(approx))
                 return true;
 
         return false;
@@ -671,6 +673,7 @@ public:
             LMIatP.resize(dim, dim);
             B.resize(dim, dim);
             max_segment_length = 0;
+            genEigenvector = Point(dim);
         }
 
         void setMaxSegmentLength(double lambda) {
@@ -696,11 +699,34 @@ public:
             lmi.evaluate_revised(position, settings.LMIatP);
         }
 
+
         BOUNDARY_CALLS++;
 
         lmi.evaluateWithoutA0_revised(direction, settings.B);
 
-        auto t1 = std::chrono::steady_clock::now();
+        // check the cutting plane
+        double lambdaMinPositive = 0;
+        bool hitCuttingPlane = false;
+
+        if (check_cutting_plane) {
+            double lambda = (b - a.dot(position)) / a.dot(direction);
+
+            if (lambda > 0) {
+                lambdaMinPositive = lambda;
+                hitCuttingPlane = true;
+
+                Spectra::DenseCholesky<double> Bop(-settings.LMIatP - lambda * settings.B);
+
+                if (Bop.info() == Spectra::SUCCESSFUL) {
+                    REFLECTION_TIME++;
+                    settings.setMaxSegmentLength(lambdaMinPositive);
+                    return {lambdaMinPositive, hitCuttingPlane};
+                }
+
+            }
+        }
+
+
 
         // Construct matrix operation object using the wrapper classes
         Spectra::DenseSymMatProd<double> op(settings.B);
@@ -714,10 +740,6 @@ public:
         geigs.init();
         int nconv = geigs.compute();
 
-        auto t2 = std::chrono::steady_clock::now();
-
-        ORACLE_TIME += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-
         // Retrieve results
         Eigen::VectorXd evalues;
         Eigen::MatrixXd evecs;
@@ -727,28 +749,31 @@ public:
             evecs = geigs.eigenvectors();
         }
 
-        double lambdaMinPositive;
 
         if (nconv == 1) {
-            lambdaMinPositive = 1 / evalues(0);
-            if (lambdaMinPositive < 0)
+            double lambda = 1 / evalues(0);
+            if (lambda < 0)
                 throw("Unbounded");
-            settings.genEigenvector = Point(evecs.col(0));
+
+            if (lambdaMinPositive == 0 || lambda < lambdaMinPositive)
+                lambdaMinPositive = lambda;
+
+            settings.genEigenvector.set(evecs.col(0));
         } else {
             lambdaMinPositive = 0;
         }
 
         // check the cutting plane
-        bool hitCuttingPlane = false;
-
-        if (check_cutting_plane) {
-            double lambda = (b - a.dot(position)) / a.dot(direction);
-
-            if (lambda > 0 && lambda < lambdaMinPositive) {
-                lambdaMinPositive = lambda;
-                hitCuttingPlane = true;
-            }
-        }
+//        bool hitCuttingPlane = false;
+//
+//        if (check_cutting_plane) {
+//            double lambda = (b - a.dot(position)) / a.dot(direction);
+//
+//            if (lambda > 0 && lambda < lambdaMinPositive) {
+//                lambdaMinPositive = lambda;
+//                hitCuttingPlane = true;
+//            }
+//        }
 
         settings.setMaxSegmentLength(lambdaMinPositive);
 
@@ -781,7 +806,7 @@ public:
         const VT &position = _position.getCoefficients();
         const VT &direction = _direction.getCoefficients();
         const VT &objectiveFunction = _objectiveFunction.getCoefficients();
-
+        BOUNDARY_CALLS++;
         unsigned int matrixDim = lmi.getMatricesDim();
         if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
 //            std::cout << objectiveFunction << "\n";
@@ -824,36 +849,36 @@ public:
         Spectra::DenseSymMatProd<double> op(AA);
 //        Spectra::SparseRegularInverse<double> Bop(B);
 
-        Spectra::DenseCholesky<double> Bop(-BB);
+        Spectra::SpectraLU<double> Bop(BB);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
 //        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
 //                geigs(&op, &Bop, 2, 4);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
-//        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::SparseSymMatProd<double>, Spectra::SparseRegularInverse<double>, Spectra::GEIGS_REGULAR_INVERSE>
-//                geigs(&op, &Bop, 1, 3);
+        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::SpectraLU<double>, Spectra::GEIGS_REGULAR_INVERSE>
+                geigs(&op, &Bop, 1, 3);
 
         // Initialize and compute
-//        geigs.init();
-//        int nconv = geigs.compute();
+        geigs.init();
+        int nconv = geigs.compute();
 //         Retrieve results
-//        Eigen::VectorXd evalues;
-//        Eigen::MatrixXd evecs;
-//        if(geigs.info() == Spectra::SUCCESSFUL)
-//        {
-//            evalues = geigs.eigenvalues();
-//            evecs = geigs.eigenvectors();
-//        }
-//
+        Eigen::VectorXd evalues;
+        Eigen::MatrixXd evecs;
+        if(geigs.info() == Spectra::SUCCESSFUL)
+        {
+            evalues = geigs.eigenvalues();
+            evecs = geigs.eigenvectors();
+        }
+
         double lambdaMinPositive = 0;
 
-//        if (nconv == 2) {
-//            lambdaMinPositive = evalues(0);
-//            genEivector = evecs.col(0).segment(matrixDim, matrixDim);
-//        } else {
-//            lambdaMinPositive = 0;
-//        }
+        if (nconv == 1) {
+            lambdaMinPositive = evalues(0);
+            settings.genEigenvector = Point(evecs.col(0).segment(matrixDim, matrixDim));
+        } else {
+            lambdaMinPositive = 0;
+        }
 
 //        Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> es(AA, -1*BB);
 //
@@ -872,38 +897,46 @@ public:
 //        MT vecs = es.eigenvectors();
 //        genEivector = vecs.col(index).segment(matrixDim, matrixDim);
 
-        Eigen::GeneralizedEigenSolver<MT> ges(AA, -BB);
 
-        Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType alphas = ges.alphas();
-        VT betas = ges.betas();
 
-        double lambdaMaxNegative = minDouble;
-        lambdaMinPositive = maxDouble;
-        int index = 0;
 
-        for (int i = 0; i < alphas.rows(); i++) {
 
-            if (betas(i) == 0 || alphas(i).imag() != 0)  //TODO WARNING do what here?
-                continue;
 
-            double lambda = alphas(i).real() / betas(i);
-//            std::cout << lambda << " e\n";
-            if (lambda > 0 && lambda < lambdaMinPositive) {
-                lambdaMinPositive = lambda;
-                index = i;
-            }
-            if (lambda < 0 && lambda > lambdaMaxNegative)
-                lambdaMaxNegative = lambda;
-        }
-//        std::cout << lambdaMinPositive << "eval\n";
+//        Eigen::GeneralizedEigenSolver<MT> ges(AA, -BB);
+//
+//        Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType alphas = ges.alphas();
+//        VT betas = ges.betas();
+//
+//        double lambdaMaxNegative = minDouble;
+//        lambdaMinPositive = maxDouble;
+//        int index = 0;
+//
+//        for (int i = 0; i < alphas.rows(); i++) {
+//
+//            if (betas(i) == 0 || alphas(i).imag() != 0)  //TODO WARNING do what here?
+//                continue;
+//
+//            double lambda = alphas(i).real() / betas(i);
+////            std::cout << lambda << " e\n";
+//            if (lambda > 0 && lambda < lambdaMinPositive) {
+//                lambdaMinPositive = lambda;
+//                index = i;
+//            }
+//            if (lambda < 0 && lambda > lambdaMaxNegative)
+//                lambdaMaxNegative = lambda;
+//        }
+////        std::cout << lambdaMinPositive << "eval\n";
+//
+//        Eigen::GeneralizedEigenSolver<MT>::EigenvectorsType eivecs = ges.eigenvectors();
+//        Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivec = eivecs.col(index);
+//
+//        settings.genEigenvector = Point(matrixDim);
+//
+//        for (int i = 0; i < matrixDim; i++)
+//            settings.genEigenvector.set_coord(i, eivec(matrixDim + i).real());
+//
 
-        Eigen::GeneralizedEigenSolver<MT>::EigenvectorsType eivecs = ges.eigenvectors();
-        Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivec = eivecs.col(index);
 
-        settings.genEigenvector = Point(matrixDim);
-
-        for (int i = 0; i < matrixDim; i++)
-            settings.genEigenvector.set_coord(i, eivec(matrixDim + i).real());
 
 //        std::cout << eivecs.col(index)<<"evec\n";
         return lambdaMinPositive;

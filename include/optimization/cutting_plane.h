@@ -69,11 +69,11 @@ namespace optimization {
             if (count < evalsSize)
                 return 1;
 
-            return abs((min - evals.front()) / min);
+            return fabs((min - evals.front()) / min);
         }
 
         double getRelativeErrorLastRound(double min) {
-             return abs((min - evals.back()) / min);
+             return fabs((min - evals.back()) / min);
         }
 
 
@@ -1023,7 +1023,7 @@ namespace optimization {
             Point facet_first, facet_second;
             std::pair<NT, NT> dbpair = polytope.line_intersect(Point(x), Point(direction), facet_first, facet_second);
 
-            double lambda = abs(dbpair.first) > abs(dbpair.second) ? dbpair.first : dbpair.second;
+            double lambda = fabs(dbpair.first) > fabs(dbpair.second) ? dbpair.first : dbpair.second;
             VT s = abs(dbpair.first) > abs(dbpair.second) ? facet_first.getCoefficients() : facet_second.getCoefficients();
 
             VT endPoint1 = x + dbpair.first * direction;

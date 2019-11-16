@@ -1000,7 +1000,7 @@ double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, 
     std::pair<double, bool> pair;
     double factor = 1.5;
 
-    while (it < factor*n) {//1.5
+    while (it < factor*n) {
 
         pair = spectrahedron.boundaryOracleBilliard(p.getCoefficients(), v.getCoefficients(), a.getCoefficients(), b, settings, it != 0 && shake_and_bake_directions);
 
@@ -1017,7 +1017,6 @@ double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, 
         if (T <= lambda) {
             p += (T * v);
             settings.LMIatP.noalias() += T*settings.B;
-
             break;
         }
 

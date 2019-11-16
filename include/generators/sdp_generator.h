@@ -68,8 +68,8 @@ optimization::sdp_problem<Point> generateSDP(int n, int m) {
         M =  2* Eigen::MatrixXd::Random(m/2,m/2) - ones;
         MT MM = M.selfadjointView<Eigen::Upper>();
 
-        for (int at = 0 ; at<m/2 ; at++)
-            MM(at,at) -= M(at,at);
+//        for (int at = 0 ; at<m/2 ; at++)
+//            MM(at,at) -= M(at,at);
 
         MT A;
         A.setZero(m, m);

@@ -64,6 +64,10 @@ public:
         coeffs(i) = coord;
     }
 
+    void set(const Coeff& vector) {
+        this->coeffs.noalias() = vector;
+    }
+
     FT operator[] (const unsigned int& i) const {
         return coeffs(i);
     }
