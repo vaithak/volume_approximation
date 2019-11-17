@@ -667,6 +667,9 @@ public:
         Point genEigenvector;
         double max_segment_length;
         bool first; //true if first call of the boundary oracle
+        bool computeB;
+        MT Obj;
+        bool isObjComputed;
 
         BoundaryOracleBilliardSettings(int dim) {
             first = true;
@@ -674,6 +677,9 @@ public:
             B.resize(dim, dim);
             max_segment_length = 0;
             genEigenvector = Point(dim);
+            Obj.resize(dim, dim);
+            isObjComputed = false;
+            computeB = true;
         }
 
         void setMaxSegmentLength(double lambda) {
@@ -699,10 +705,17 @@ public:
             lmi.evaluate_revised(position, settings.LMIatP);
         }
 
+        if (!settings.isObjComputed) {
+            settings.isObjComputed = true;
+            lmi.evaluateWithoutA0_revised(a, settings.Obj);
+        }
 
         BOUNDARY_CALLS++;
 
-        lmi.evaluateWithoutA0_revised(direction, settings.B);
+        if (settings.computeB)
+            lmi.evaluateWithoutA0_revised(direction, settings.B);
+
+        settings.computeB = true;
 
         // check the cutting plane
         double lambdaMinPositive = 0;
@@ -846,10 +859,10 @@ public:
 
         // Construct matrix operation object using the wrapper classes
 //        Spectra::SparseSymMatProd<double> op(A);
-        Spectra::DenseSymMatProd<double> op(AA);
+        Spectra::DenseSymMatProd<double> op(BB);
 //        Spectra::SparseRegularInverse<double> Bop(B);
 
-        Spectra::SpectraLU<double> Bop(BB);
+        Spectra::SpectraLU<double> Bop(AA);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
 //        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
@@ -874,7 +887,7 @@ public:
         double lambdaMinPositive = 0;
 
         if (nconv == 1) {
-            lambdaMinPositive = evalues(0);
+            lambdaMinPositive = 1/evalues(0);
             settings.genEigenvector = Point(evecs.col(0).segment(matrixDim, matrixDim));
         } else {
             lambdaMinPositive = 0;

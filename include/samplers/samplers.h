@@ -1029,7 +1029,10 @@ double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, 
 
         if (pair.second) {
             //we hit the cutting plane
-            v += ((-2.0 * v.dot(a)) * a);
+            double l = -2.0 * v.dot(a);
+            v +=  l * a;
+            settings.B += l * settings.Obj;
+            settings.computeB = false;
         }
         else
             spectrahedron.compute_reflection(settings.genEigenvector, v);
