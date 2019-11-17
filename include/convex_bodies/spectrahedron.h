@@ -603,9 +603,11 @@ public:
     boundaryOracleCDHR(const VT &position, const int& coordinate, const VT &a, const double &b,
                            BoundaryOracleCDHRSettings<Point> &settings) {
 
+        ORACLE_TIME++;
         if (settings.first) {
             lmi.evaluate_revised(position, settings.LMIatP);
         }
+
 
         // Construct matrix operation object using the wrapper classes
 
@@ -770,6 +772,8 @@ public:
 
             if (lambdaMinPositive == 0 || lambda < lambdaMinPositive)
                 lambdaMinPositive = lambda;
+            else
+                hitCuttingPlane = true;
 
             settings.genEigenvector.set(evecs.col(0));
         } else {
@@ -1024,7 +1028,7 @@ public:
             gradient.set_coord(i, U.segment(i*m,m).dot(coeffs));
         }
 
-        gradient = -1 * gradient;
+//        gradient = -1 * gradient;
         gradient.normalize();
 
         gradient *= (-2.0 * direction.dot(gradient));

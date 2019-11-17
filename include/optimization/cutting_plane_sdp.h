@@ -921,7 +921,7 @@ namespace optimization {
         BOUNDARY_CALLS = ORACLE_TIME = REFLECTION_TIME = 0;
 
         SlidingWindow slidingWindow(6 + sqrt(dim));
-        SlidingWindow changeWindow(3 + pow(dim,0.25));
+        SlidingWindow changeWindow(3 + 2*sqrt(dim)/3);
 
         std::pair<Point, Point> minimizingPoints;
         Spectrahedron::BoundaryOracleBilliardSettings<Point> billiardSettings(spectrahedron.getLMI().getMatricesDim());
@@ -947,6 +947,9 @@ namespace optimization {
 
         Point previousMinimizingSecond;
         diameter = cdhrSettings.maxSegmentLength();
+        bool useBilliard = false;
+        int previous = 0;
+        double lastPrevious = min;
 
         do {
             previousMinimizingSecond = minimizingPoints.second;
@@ -955,25 +958,51 @@ namespace optimization {
 
             cdhrSettings.resetMaxSegmentLength();
 
-//            if (changeWindow.getRelativeError() > 0.005) {
-//                minimizingPoints = min_rand_point_generator_cdhr(spectrahedron, objectiveFunction, interiorPoint, 1.5*dim, a, b, parameters, cdhrSettings);
-//            }
-//            else {
+//            if (changeWindow.getRelativeError() > 0.0001) {
+            if (!useBilliard) {
+                minimizingPoints = min_rand_point_generator_cdhr(spectrahedron, objectiveFunction, interiorPoint, dim*1.5, a, b, parameters, cdhrSettings);
+            }
+            else {
                 billiardSettings.resetMaxSegmentLength();
                 minimizingPoints = min_rand_point_generator_billiard(spectrahedron, objectiveFunction, interiorPoint, rnum, a, b, parameters, diameter, billiardSettings);
-//            }
+            }
 
             min = objectiveFunction.dot(minimizingPoints.second);
             b = min/a_norm;
+//            std::cout << BOUNDARY_CALLS - previous << " " << min << "\n";
+//            previous = BOUNDARY_CALLS;
 
-            slidingWindow.push(min);
+
+
+            if (!useBilliard) {
+                if (changeWindow.getRelativeErrorLastRound(min) < 0.001) {
+//                    std::cout << changeWindow.getRelativeErrorLastRound(min) << " " << step
+//                              << " -------------------------------------\n";
+                    useBilliard = true;
+                    step++;
+                    changeWindow.push(min);
+                    slidingWindow.push(min);
+                    lastPrevious = min;
+                    continue;
+                }
+            }
+
             changeWindow.push(min);
+            slidingWindow.push(min);
 
             if (slidingWindow.getRelativeError() < error)
                 break;
 
-            diameter = getDiameterLength(previousMinimizingSecond, minimizingPoints.first, billiardSettings.maxSegmentLength(), cdhrSettings.maxSegmentLength());
+            if (useBilliard)
+                diameter = getDiameterLength(previousMinimizingSecond, minimizingPoints.first, billiardSettings.maxSegmentLength(), cdhrSettings.maxSegmentLength());
+
             step++;
+//            std::cout << changeWindow.getRelativeError() << "\n";
+            if ((changeWindow.getRelativeError() > 0.01 || relative_error(lastPrevious, min) > 0.01) && useBilliard) {
+//                std::cout << changeWindow.getRelativeErrorLastRound(min) << " ++++++++++++++++++++++++++++\n";
+                useBilliard = false;
+            }
+
         } while (step <= maxSteps || tillConvergence);
 
         STEPS = step;

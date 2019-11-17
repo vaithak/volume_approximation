@@ -38,7 +38,7 @@ namespace optimization {
      * @return
      */
     double relative_error(double approx, double exact) {
-        return abs((exact - approx) / exact);
+        return fabs((exact - approx) / exact);
     }
 
 
