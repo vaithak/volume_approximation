@@ -23,10 +23,15 @@
 #define VOLESTI_DEBUG
 #include <fstream>
 #include "volume.h"
-//#include "ball_ann_vol.h"
-//#include "hzono_vol.h"
+#include "ball_ann_vol.h"
+#include "low_dimensional_sampling.h"
+#include "hzono_vol.h"
+#include "hvol_vpoly.h"
+#include "hvol_proj.h"
 #include "sample_only.h"
 #include "exact_vols.h"
+#include "simplex_samplers.h"
+
 
 //////////////////////////////////////////////////////////
 /**** MAIN *****/
@@ -419,8 +424,8 @@ int main(const int argc, const char** argv)
               InnerBall.first = VP.get_mean_of_vertices();
               InnerBall.second = 0.0;
               vars <NT, RNGType> var2(1, n, 1, n_threads, 0.0, e, 0, 0.0, 0, InnerBall.second, 2 * VP.get_max_vert_norm(),
-                                      rng, urdist, urdist1,
-                                      -1, verbose, rand_only, round, NN, birk, false, false, true, false);
+                                      rng, urdist, urdist1, -1, verbose, rand_only, round, NN, birk,
+                                      false, false, true, false, 0.0,0.0,0.0);
               std::pair <NT, NT> res_round = rounding_min_ellipsoid(VP, InnerBall, var2);
               round_val = res_round.first;
               round = false;
@@ -530,9 +535,9 @@ int main(const int argc, const char** argv)
           }
       }
       vars<NT, RNGType> var1(0, n, walk_len, 1, 0, 0, 0, 0.0, 0, InnerBall.second, diameter, rng,
-                urdist, urdist1, delta, verbose, rand_only, round, NN, birk, ball_walk, cdhr, rdhr,billiard);
+                urdist, urdist1, delta, verbose, rand_only, round, NN, birk, ball_walk, cdhr, rdhr,billiard,0.0,0.0,0.0);
       vars_g<NT, RNGType> var2(n, walk_len, N, W, 1, 0, InnerBall.second, rng, C, frac, ratio, delta,
-                  false, verbose, rand_only, round, NN, birk, ball_walk, cdhr, rdhr);
+                  false, verbose, rand_only, round, NN, birk, ball_walk, cdhr, rdhr,0.0,0.0);
 
       double tstart11 = (double)clock()/(double)CLOCKS_PER_SEC;
       if (Zono) {
@@ -563,7 +568,7 @@ int main(const int argc, const char** argv)
   std::vector<NT> vs;
   NT average, std_dev;
   double Chebtime, sum_Chebtime=double(0);
-  NT vol;
+  NT vol, nballs;
   
   for(unsigned int i=0; i<num_of_exp; ++i){
       std::cout<<"Experiment "<<i+1<<" ";
@@ -571,7 +576,7 @@ int main(const int argc, const char** argv)
 
       // Setup the parameters
       vars<NT, RNGType> var(rnum,n,walk_len,n_threads,err,e,0,0.0,0,InnerBall.second,diameter,rng,
-               urdist,urdist1,delta,verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr,billiard);
+               urdist,urdist1,delta,verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr,billiard,0.0,0.0,0.0);
 
       if(round_only) {
           // Round the polytope and exit
@@ -597,34 +602,34 @@ int main(const int argc, const char** argv)
 
               // setup the parameters
               vars<NT, RNGType> var2(rnum,n,10 + n/10,n_threads,err,e,0,0.0,0,InnerBall.second,diameter,rng,
-                       urdist,urdist1,delta,verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr,billiard);
+                       urdist,urdist1,delta,verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr,billiard,0.0,0.0,0.0);
 
               vars_g<NT, RNGType> var1(n,walk_len,N,W,1,error,InnerBall.second,rng,C,frac,ratio,delta,false,
-                          verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr);
+                          verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr,0.0,0.0);
 
               if (Zono) {
-                  vol = volume_gaussian_annealing(ZP, var1, var2, InnerBall);
+                  vol = volume_gaussian_annealing(ZP, var1, var2, InnerBall, nballs);
               } else if (!Vpoly) {
-                  vol = volume_gaussian_annealing(HP, var1, var2, InnerBall);
+                  vol = volume_gaussian_annealing(HP, var1, var2, InnerBall, nballs);
               } else {
-                  vol = volume_gaussian_annealing(VP, var1, var2, InnerBall);
+                  vol = volume_gaussian_annealing(VP, var1, var2, InnerBall, nballs);
               }
 
           } else if (BAN) {
               vars_ban <NT> var_ban(lb, ub, p, rmax, alpha, W, N, nu, win2);
               if (Zono) {
                   if (!hpoly) {
-                      //vol = volesti_ball_ann(ZP, var, var_ban, InnerBall);
+                      vol = volesti_ball_ann(ZP, var, var_ban, InnerBall,nballs);
                   } else {
                       vars_g <NT, RNGType> varg(n, 1, N, 6 * n * n + 500, 1, e, InnerBall.second, rng, C, frac, ratio, delta,
                                                 false, verbose,
-                                                rand_only, false, false, birk, false, true, false);
-                      //vol = vol_hzono < HPolytope < Point > > (ZP, var, var_ban, varg, InnerBall);
+                                                rand_only, false, false, birk, false, true, false,0.0,0.0);
+                      vol = vol_hzono < HPolytope < Point > > (ZP, var, var_ban, varg, InnerBall,nballs);
                   }
               } else if (!Vpoly) {
-                  //vol = volesti_ball_ann(HP, var, var_ban, InnerBall);
+                  vol = volesti_ball_ann(HP, var, var_ban, InnerBall, nballs);
               } else {
-                 // vol = round_val * volesti_ball_ann(VP, var, var_ban, InnerBall);
+                  vol = round_val * volesti_ball_ann(VP, var, var_ban, InnerBall, nballs);
               }
           } else {
               if (Zono) {
