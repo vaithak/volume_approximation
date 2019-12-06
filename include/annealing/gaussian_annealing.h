@@ -134,6 +134,7 @@ NT get_next_gaussian(Polytope &P, Point &p, NT a, unsigned int N,
 
     //sample N points using hit and run or ball walk
     rand_gaussian_point_generator(P, p, N, var.walk_steps, randPoints, last_a, var);
+    var.TotSteps += NT(N);
 
     viterator fnit;
     while(!done){
@@ -161,11 +162,11 @@ NT get_next_gaussian(Polytope &P, Point &p, NT a, unsigned int N,
 
 
 // Compute the sequence of spherical gaussians
-template <class Polytope, class Parameters, typename NT>
+template <class Point, class Polytope, class Parameters, typename NT>
 void get_annealing_schedule(Polytope &P, NT radius, NT ratio, NT C, NT frac, unsigned int N,
                             Parameters var, NT &error, std::vector<NT> &a_vals){
 
-    typedef typename Polytope::PolytopePoint Point;
+    //typedef typename Polytope::PolytopePoint Point;
     // Compute the first gaussian
     get_first_gaussian(P, radius, frac, var, error, a_vals);
     #ifdef VOLESTI_DEBUG
@@ -209,6 +210,7 @@ void get_annealing_schedule(Polytope &P, NT radius, NT ratio, NT C, NT frac, uns
 
         if (var.cdhr_walk){
             gaussian_first_coord_point(P, p, p_prev, coord_prev, var.walk_steps, a_vals[it], lamdas, var);
+            var.TotSteps += 1.0;
             curr_its += 1.0;
             curr_fn += eval_exp(p, next_a) / eval_exp(p, a_vals[it]);
             steps--;
@@ -217,6 +219,7 @@ void get_annealing_schedule(Polytope &P, NT radius, NT ratio, NT C, NT frac, uns
         // Compute some ratios to decide if this is the last gaussian
         for (unsigned  int j = 0; j < steps; j++) {
             gaussian_next_point(P, p, p_prev, coord_prev, var.walk_steps, a_vals[it], lamdas, var);
+            var.TotSteps += 1.0;
             curr_its += 1.0;
             curr_fn += eval_exp(p, next_a) / eval_exp(p, a_vals[it]);
         }

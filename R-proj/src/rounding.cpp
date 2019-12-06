@@ -16,7 +16,9 @@
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include "vars.h"
-#include "polytopes.h"
+#include "hpolytope.h"
+#include "vpolytope.h"
+#include "zpolytope.h"
 #include "samplers.h"
 #include "rounding.h"
 #include "extractMatPoly.h"
@@ -24,18 +26,18 @@
 //' Internal rcpp function for the rounding of a convex polytope
 //'
 //' @param P A convex polytope (H- or V-representation or zonotope).
-//' @param WalkType Optional. A string that declares the random walk.
-//' @param walk_step Optional. The number of the steps for the random walk.
+//' @param random_walk Optional. A string that declares the random walk.
+//' @param walk_length Optional. The number of the steps for the random walk.
 //' @param radius Optional. The radius for the ball walk.
 //'
 //' @section warning:
 //' Do not use this function.
 //'
-//' @return A numerical matrix that describes the rounded polytope and contains the round value.
+//' @return A List that contains a numerical matrix that describes the rounded polytope and the round value.
 // [[Rcpp::export]]
 Rcpp::List rounding (Rcpp::Reference P,
-                              Rcpp::Nullable<std::string> WalkType = R_NilValue,
-                              Rcpp::Nullable<unsigned int> walk_step = R_NilValue,
+                              Rcpp::Nullable<std::string> random_walk = R_NilValue,
+                              Rcpp::Nullable<unsigned int> walk_length = R_NilValue,
                               Rcpp::Nullable<double> radius = R_NilValue) {
 
     typedef double NT;
@@ -56,13 +58,13 @@ Rcpp::List rounding (Rcpp::Reference P,
             NN=false,
             birk=false,
             verbose=false,
-            cdhr=true, rdhr = false, ball_walk = false;
+            cdhr=true, rdhr = false, ball_walk = false, billiard = false;
     NT delta = -1.0;
 
     unsigned int n = P.field("dimension");
     unsigned int rnum = std::pow(1.0,-2.0) * 400 * n * std::log(n);
     unsigned int walkL = 10+n/10;
-    if(walk_step.isNotNull()) walkL = Rcpp::as<unsigned int>(walk_step);
+    if(walk_length.isNotNull()) walkL = Rcpp::as<unsigned int>(walk_length);
 
     std::pair <Point, NT> InnerBall;
     Rcpp::NumericMatrix Mat;
@@ -89,15 +91,20 @@ Rcpp::List rounding (Rcpp::Reference P,
         //default: throw Rcpp::exception("Wrong polytope input");
     }
 
-    if(!WalkType.isNotNull() || Rcpp::as<std::string>(WalkType).compare(std::string("CDHR"))==0){
+    if(!random_walk.isNotNull() || Rcpp::as<std::string>(random_walk).compare(std::string("CDHR"))==0){
         cdhr = true;
         rdhr = false;
         ball_walk = false;
-    } else if (Rcpp::as<std::string>(WalkType).compare(std::string("RDHR"))==0) {
+    } else if (Rcpp::as<std::string>(random_walk).compare(std::string("RDHR"))==0) {
         cdhr = false;
         rdhr = true;
         ball_walk = false;
-    } else if (Rcpp::as<std::string>(WalkType).compare(std::string("BW"))==0) {
+    } else if (Rcpp::as<std::string>(random_walk).compare(std::string("BilW"))==0) {
+        cdhr = false;
+        rdhr = false;
+        ball_walk = false;
+        billiard = true;
+    } else if (Rcpp::as<std::string>(random_walk).compare(std::string("BW"))==0) {
         if(radius.isNotNull()){
             delta = Rcpp::as<NT>(radius);
         } else {
@@ -117,8 +124,8 @@ Rcpp::List rounding (Rcpp::Reference P,
     boost::random::uniform_real_distribution<> urdist1(-1,1);
 
     // initialization
-    vars<NT, RNGType> var(rnum,n,walkL,1,0.0,0.0,0,0.0,0,InnerBall.second,rng,urdist,urdist1,
-                          delta,verbose,rand_only,false,NN,birk,ball_walk,cdhr,rdhr);
+    vars<NT, RNGType> var(rnum,n,walkL,1,0.0,0.0,0,0.0,0,InnerBall.second,0.0,rng,urdist,urdist1,
+                          delta,verbose,rand_only,false,NN,birk,ball_walk,cdhr,rdhr, billiard, 0.0, 0.0, 0.0);
     std::pair <NT, NT> round_res;
 
     switch (type) {

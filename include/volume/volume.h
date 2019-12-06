@@ -24,7 +24,11 @@
 #include "random/normal_distribution.hpp"
 #include "random/uniform_real_distribution.hpp"
 #include "vars.h"
-#include "polytopes.h"
+#include "hpolytope.h"
+#include "vpolytope.h"
+#include "zpolytope.h"
+#include "projection_poly.h"
+//#include "permutaedron.h"
 //#include "ellipsoids.h"
 #include "ballintersectconvex.h"
 #include "vpolyintersectvpoly.h"
@@ -102,6 +106,7 @@ NT volume(Polytope &P,
     }
     P.shift(c_e);
     c=Point(n);
+    P.normalize();
 
     rnum=rnum/n_threads;
     NT vol=0;
@@ -116,7 +121,7 @@ NT volume(Polytope &P,
         if(print) std::cout<<"\nGenerate the first random point in P"<<std::endl;
         #endif
         
-        Point p = get_point_on_Dsphere<RNGType , Point>(n, radius);
+        Point p = get_point_in_Dsphere<RNGType , Point>(n, radius);
         //p=p+c;
         
         std::list<Point> randPoints; //ds for storing rand points
@@ -254,6 +259,7 @@ NT volume(Polytope &P,
     if(print) std::cout<<"volume computed: "<<vol<<std::endl;
     #endif
 
+    P.free_them_all();
     return vol;
 }
 
@@ -266,7 +272,7 @@ template <class Polytope, class UParameters, class GParameters, class Point, typ
 NT volume_gaussian_annealing(Polytope &P,
                              GParameters &var,  // constans for volume
                              UParameters &var2,
-                             std::pair<Point,NT> InnerBall) {
+                             std::pair<Point,NT> InnerBall, NT &nballs) {
     //typedef typename Polytope::MT 	MT;
     typedef typename Polytope::VT 	VT;
     typedef typename UParameters::RNGType RNGType;
@@ -332,13 +338,14 @@ NT volume_gaussian_annealing(Polytope &P,
     if(print) std::cout<<"\n\nComputing annealing...\n"<<std::endl;
     #endif
     double tstart2 = (double)clock()/(double)CLOCKS_PER_SEC;
-    get_annealing_schedule(P, radius, ratio, C, frac, N, var, error, a_vals);
+    get_annealing_schedule<Point>(P, radius, ratio, C, frac, N, var, error, a_vals);
     double tstop2 = (double)clock()/(double)CLOCKS_PER_SEC;
     #ifdef VOLESTI_DEBUG
     if(print) std::cout<<"All the variances of schedule_annealing computed in = "<<tstop2-tstart2<<" sec"<<std::endl;
     #endif
 
     unsigned int mm = a_vals.size()-1, j=0;
+    nballs = NT(mm);
 
     #ifdef VOLESTI_DEBUG
     if(print){
@@ -367,6 +374,7 @@ NT volume_gaussian_annealing(Polytope &P,
     // Compute the first point if CDHR is requested
     if(var.cdhr_walk){
         gaussian_first_coord_point(P,p,p_prev,coord_prev,var.walk_steps,*avalsIt,lamdas,var);
+        var.TotSteps += 1.0;
     }
     for ( ; fnIt != fn.end(); fnIt++, itsIt++, avalsIt++, i++) { //iterate over the number of ratios
         //initialize convergence test
@@ -390,6 +398,7 @@ NT volume_gaussian_annealing(Polytope &P,
         while(!done || (*itsIt)<min_steps){
 
             gaussian_next_point(P,p,p_prev,coord_prev,var.walk_steps,*avalsIt,lamdas,var);
+            var.TotSteps += 1.0;
 
             *itsIt = *itsIt + 1.0;
             *fnIt = *fnIt + eval_exp(p,*(avalsIt+1)) / eval_exp(p,*avalsIt);
@@ -438,6 +447,8 @@ NT volume_gaussian_annealing(Polytope &P,
         std::cout<<"\nTotal number of steps = "<<steps<<"\n"<<std::endl;
     }
     #endif
+
+    P.free_them_all();
 
     return vol;
 }

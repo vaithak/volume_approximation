@@ -50,6 +50,10 @@ public:
         return 0;
     }
 
+    VT get_vec() {
+        return P1.get_vec();
+    }
+
     unsigned int dimension() {
         return P1.dimension();
     }
@@ -71,6 +75,10 @@ public:
         return rad;
     }
 
+    MT get_mat() {
+        return P1.get_mat();
+    }
+
     MT get_mat1() {
         return P1.get_mat();
     }
@@ -78,6 +86,17 @@ public:
     MT get_mat2() {
         return P2.get_mat();
     }
+
+    Point get_mean_of_vertices() {
+        return Point(P1.dimension());
+    }
+
+
+    NT get_max_vert_norm() {
+        return 0.0;
+    }
+
+    void comp_diam(NT &diam) {}
 
     void print() {
         P1.print();
@@ -176,16 +195,51 @@ public:
         return Q.ComputeInnerBall();
     }*/
 
+
     // compute intersection point of ray starting from r and pointing to v
     // with the V-polytope
-    std::pair<NT,NT> line_intersect(Point r,
-                                    Point v) {
+    std::pair<NT,NT> line_intersect(Point r, Point v) {
 
         std::pair <NT, NT> P1pair = P1.line_intersect(r, v);
         std::pair <NT, NT> P2pair = P2.line_intersect(r, v);
         return std::pair<NT, NT>(std::min(P1pair.first, P2pair.first),
                                  std::max(P1pair.second, P2pair.second));
 
+    }
+
+
+    // compute intersection point of ray starting from r and pointing to v
+    // with the V-polytope
+    std::pair<NT,NT> line_intersect(Point r, Point v, std::vector<NT> &Ar, std::vector<NT> &Av) {
+
+        std::pair <NT, NT> P1pair = P1.line_intersect(r, v, Ar, Av);
+        std::pair <NT, NT> P2pair = P2.line_intersect(r, v, Ar, Av);
+        return std::pair<NT, NT>(std::min(P1pair.first, P2pair.first),
+                                 std::max(P1pair.second, P2pair.second));
+
+    }
+
+    // compute intersection point of ray starting from r and pointing to v
+    // with the V-polytope
+    std::pair<NT,NT> line_intersect(Point r, Point v, std::vector<NT> &Ar, std::vector<NT> &Av, NT &lambda_prev) {
+
+        std::pair <NT, NT> P1pair = P1.line_intersect(r, v, Ar, Av);
+        std::pair <NT, NT> P2pair = P2.line_intersect(r, v, Ar, Av);
+        return std::pair<NT, NT>(std::min(P1pair.first, P2pair.first),
+                                 std::max(P1pair.second, P2pair.second));
+
+    }
+
+
+    std::pair<NT, int> line_positive_intersect(Point r, Point v, std::vector<NT> &Ar, std::vector<NT> &Av) {
+
+        return std::pair<NT, int> (0.0, 0);
+    }
+
+
+    std::pair<NT, int> line_positive_intersect(Point r, Point v, std::vector<NT> &Ar, std::vector<NT> &Av, NT &lambda_prev) {
+
+        return std::pair<NT, int> (0.0, 0);
     }
 
 
@@ -214,6 +268,7 @@ public:
                                  std::max(P1pair.second, P2pair.second));
     }
 
+    void intersect_double_line_Vpoly_return(Point &r, Point &v, std::vector<NT> &lambdas1, std::vector<NT> &lambdas2){}
 
     // shift polytope by a point c
     void shift(VT c) {
@@ -246,6 +301,31 @@ public:
         }
 
         return true;
+    }
+
+    void compute_eigenvectors(MT G, bool norm1, bool norm2) {}
+
+    MT get_T() {
+        return P1.get_mat();
+    }
+
+    MT get_Q0(){
+        return P1.get_mat();
+    }
+
+    MT get_sigma() {
+        return P1.get_mat();
+    }
+
+    void normalize() {}
+
+    void compute_reflection (Point &v, Point &p, int &facet) {}
+
+    void add_facet(VT a, NT z0){}
+
+    void free_them_all() {
+        P1.free_them_all();
+        P2.free_them_all();
     }
 
 };
