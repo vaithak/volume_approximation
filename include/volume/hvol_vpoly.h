@@ -69,7 +69,7 @@ NT hvol_vpoly (Vpolytope &VP, UParameters &var, AParameters &var_ban, GParameter
 
     //var3.walk_steps = 1;
 
-    if(verbose) std::cout<<"computing hpoly annealing.. = "<<vol<<"\n"<<std::endl;
+    if(verbose) std::cout<<"computing hpoly annealing.. = "<<vol<<"\ne="<<e<<std::endl;
     std::cout<<"N = "<<N<<" nu = "<< nu<<std::endl;
     if (HP3.is_all_positive()){
         std::cout<<"all bi positives"<<std::endl;
@@ -94,8 +94,8 @@ NT hvol_vpoly (Vpolytope &VP, UParameters &var, AParameters &var_ban, GParameter
     NT er1 = (e*std::sqrt(2.0*NT(mm2)-1))/(std::sqrt(2.0*NT(mm2)));
     NT Her = e/(2.0*std::sqrt(NT(mm2)));
 
-    var_g.error = Her;
-    std::cout<<"computing vol of h-polytope = "<<vol<<std::endl;
+    var_g.error = Her/2.0;
+    std::cout<<"computing vol of h-polytope = "<<vol<<"e = "<<e<<std::endl;
     NT fake_nballs;
     //BallPoly BP2(HP, B0);
     //std::pair<Point, NT> InnerBall2 = BP2.ComputeInnerBall();

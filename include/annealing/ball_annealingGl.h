@@ -103,7 +103,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
     bool print = true;
     std::list<Point> randPoints;
     Point p(n);
-
+    std::cout<<"rmax = "<<rmax<<" rad1 = "<<radius<<std::endl;
     if(rmax>0.0) {
         for (int i = 0; i < 1200; ++i) {
             randPoints.push_back(get_point_in_Dsphere<RNGType, Point>(n, rmax));
@@ -119,7 +119,6 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
         rmax = 2 * std::sqrt(NT(n)) * radius;
     }
     NT rad1 = radius;
-    std::cout<<"rmax = "<<rmax<<" rad1 = "<<rad1<<std::endl;
 
     //std::cout<<"rad1 = "<<rad1<<" rmax = "<<rmax<<std::endl;
     while(!bisection_int) {
@@ -134,12 +133,10 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
             B0 = ball(Point(n), rmax*rmax);
             return;
         }
-
         if (too_few) break;
         rad1 = rmax;
         rmax = rmax + 2*std::sqrt(NT(n))*radius;
     }
-
     NT rad_med, rad0=rad1, rad_m = rmax;;
 
     while(true) {

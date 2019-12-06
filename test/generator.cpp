@@ -224,6 +224,7 @@ int main(const int argc, const char** argv) {
         }
         if(!strcmp(argv[i],"-rand")) {
             rand = true;
+            if (body<0) body = 1;
             correct = true;
         }
         if(!strcmp(argv[i],"-d")) {
@@ -238,7 +239,7 @@ int main(const int argc, const char** argv) {
             body = atof(argv[++i]);
             correct = true;
         }
-        if(!strcmp(argv[i],"-m")) {
+        if(!strcmp(argv[i],"-k")) {
             m = atof(argv[++i]);
             correct = true;
         }
@@ -251,7 +252,7 @@ int main(const int argc, const char** argv) {
 
     }
 
-    if (kind < 0 || d < 0) {
+    if (d < 0 || (body<0 && kind<0) ) {
         std::cout<<"Wrong inputs, try -help"<<std::endl;
         exit(-1);
     }
@@ -261,16 +262,19 @@ int main(const int argc, const char** argv) {
             Zonotope ZP;
             switch (kind) {
                 case 1:
-                    ZP = gen_zonotope<Zonotope, RNGType>(d, m);
+                    std::cout<<"uniform"<<std::endl;
+                    ZP = gen_zonotope_uniform<Zonotope, RNGType>(d, m);
                     break;
                 case 2:
+                    std::cout<<"gaussian"<<std::endl;
                     ZP = gen_zonotope_gaussian<Zonotope, RNGType>(d, m);
                     break;
                 case 3:
-                    ZP = gen_zonotope_uniform<Zonotope, RNGType>(d, m);
+                    std::cout<<"exponential"<<std::endl;
+                    ZP = gen_zonotope_exponential<Zonotope, RNGType>(d, m);
                     break;
                 case 4:
-                    ZP = gen_zonotope_exponential<Zonotope, RNGType>(d, m);
+                    ZP = gen_zonotope<Zonotope, RNGType>(d, m);
                     break;
             }
             //Zonotope ZP = gen_zonotope<Zonotope, RNGType>(d, m);

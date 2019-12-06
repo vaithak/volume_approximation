@@ -77,7 +77,7 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
     HP.init(n,A3,b);
 
     VT Zs_max(2*m);
-    if(verbose) std::cout<<"get first hpoly.. = "<<vol<<"\n"<<std::endl;
+    if(verbose) std::cout<<"get first hpoly.. = "<<vol<<"\ne="<<e<<std::endl;
     UParameters var3 = var;
     var3.cdhr_walk = true;
     var3.ball_walk = false;
@@ -117,7 +117,7 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
     NT er1 = (e*std::sqrt(2.0*NT(mm2)-1))/(std::sqrt(2.0*NT(mm2)));
     NT Her = e/(2.0*std::sqrt(NT(mm2)));
 
-    var_g.error = Her;
+    var_g.error = Her/2.0;
     std::cout<<"computing vol of h-polytope = "<<vol<<std::endl;
     NT fake_nballs;
     vol = volume_gaussian_annealing(HP, var_g, var, InnerBall, fake_nballs);
@@ -129,7 +129,7 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
         var2.ball_walk = false;
         var2.rdhr_walk = false;
         var2.bill_walk = false;
-        var2.walk_steps = 10+2*n;
+        var2.walk_steps = 10+4*n;
         vol *= esti_ratio_interval<RNGType, Point>(HP2, ZP, ratio, er0, win_len, N*nu, prob, var2);
     } else {
         vol *= esti_ratio<RNGType, Point>(HP2, ZP, ratio, er0, var_g.W, N*nu, var);

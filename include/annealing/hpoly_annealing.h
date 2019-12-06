@@ -147,11 +147,12 @@ void get_first_poly(VPolytope &VP, HPolytope &HP, NT lb, NT &up_lim, NT &ratio, 
         //variter.che_rad = HPiter.ComputeInnerBall().second;
 
         randPoints.clear();
-        rand_point_generator(HPiter, q, 1200, 10+2*n, randPoints, variter);
+        rand_point_generator(HPiter, q, 1200, 10+4*n, randPoints, variter);
         var.MemLps = var.MemLps + 1200.0;
         too_few = false;
 
         if(check_converg001<Point>(VP, randPoints, lb, up_lim, too_few, ratio, 10, 0.2, true, false)) {
+            std::cout<<"ratio = "<<ratio<<std::endl;
             HP.set_vec(Zmed);
             return;
         }
@@ -161,7 +162,8 @@ void get_first_poly(VPolytope &VP, HPolytope &HP, NT lb, NT &up_lim, NT &ratio, 
         } else {
             l = med;
         }
-        if(med>0.9) {
+        if(med>0.95) {
+            std::cout<<"ratio = "<<ratio<<std::endl;
             HP.set_vec(Zmed);
             return;
         }
@@ -212,7 +214,7 @@ void get_hdelta(Polytope &P, HPolytope &HP, VT &Zs_max_gl, NT lb, NT &up_lim, NT
         //variter.che_rad = HPiter.ComputeInnerBall().second;
 
         randPoints.clear();
-        rand_point_generator(HPiter, q, 1200, 10+2*n, randPoints, variter);
+        rand_point_generator(HPiter, q, 1200, 10+4*n, randPoints, variter);
         var.MemLps = var.MemLps + 1200.0;
         too_few = false;
 

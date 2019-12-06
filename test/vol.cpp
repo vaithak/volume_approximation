@@ -43,9 +43,9 @@ FT factorial(FT n)
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
 
-// Approximating the volume of a convex polytope or body 
+// Approximating the volume of a convex polytope or body
 // can also be used for integration of concave functions.
-// The user should provide the appropriate membership 
+// The user should provide the appropriate membership
 // oracles.
 
 int main(const int argc, const char** argv)
@@ -59,15 +59,15 @@ int main(const int argc, const char** argv)
     typedef VPolytope<Point, RNGType > Vpolytope;
     typedef Zonotope<Point> Zonotope;
     typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
-    int n, nexp=1, n_threads=1, W;
+    int n, nexp=1, n_threads=1, W, nfacets = 0;
     int walk_len,N, nsam = 100, nu = 10;
     NT e=1;
     NT exactvol(-1.0), a=0.5;
-    bool verbose=false, 
-	 rand_only=false, 
+    bool verbose=false,
+	 rand_only=false,
 	 round_only=false,
-	 file=false, 
-	 round=false, 
+	 file=false,
+	 round=false,
 	 NN=false,
 	 user_walk_len=false,
 	 linear_extensions=false,
@@ -87,6 +87,7 @@ int main(const int argc, const char** argv)
          exact_zono = false,
          gaussian_sam = false,
          user_randwalk = false,
+            test_round = false,
          win2 = false;
 
     //this is our polytope
@@ -97,13 +98,13 @@ int main(const int argc, const char** argv)
     // parameters of CV algorithm
     bool user_W=false, user_N=false, user_ratio=false;
     NT ball_radius=0.0, diameter = -1.0, lb = 0.1, ub = 0.15, p = 0.75, rmax = 0.0, alpha = 0.2, round_val = 1.0;
-    NT C=2.0,ratio,frac=0.1,delta=-1.0,error=0.2;
+    NT C=2.0,ratio,frac=0.1,delta=-1.0,error=0.1;
 
   if(argc<2){
     std::cout<<"Use -h for help"<<std::endl;
     exit(-2);
   }
-  
+
   //parse command line input vars
   for(int i=1;i<argc;++i){
       bool correct = false;
@@ -315,9 +316,18 @@ int main(const int argc, const char** argv)
           round = true;
           correct = true;
       }
+      if(!strcmp(argv[i],"-rp")){
+          test_round = true;
+          round = true;
+          correct = true;
+      }
       if(!strcmp(argv[i],"-e")||!strcmp(argv[i],"--error")){
           e = atof(argv[++i]);
           error = e;
+          correct = true;
+      }
+      if(!strcmp(argv[i],"-nfacets")){
+          nfacets = atof(argv[++i]);
           correct = true;
       }
       if(!strcmp(argv[i],"-w")||!strcmp(argv[i],"--walk_len")){
@@ -353,10 +363,13 @@ int main(const int argc, const char** argv)
       }
       if(!strcmp(argv[i],"-cg")){
           annealing = true;
+          e=0.1;
           correct = true;
       }
-      if(!strcmp(argv[i],"-ban")){
+      if(!strcmp(argv[i],"-cb")){
+          annealing = true;
           BAN = true;
+          e=0.1;
           correct = true;
       }
       if(!strcmp(argv[i],"-hpoly")){
@@ -388,7 +401,7 @@ int main(const int argc, const char** argv)
                      "\', try "<<argv[0]<<" --help"<<std::endl;
           exit(-2);
       }
-      
+
   }
 
   if (exact_zono) {
@@ -406,28 +419,44 @@ int main(const int argc, const char** argv)
   //Compute chebychev ball//
   std::pair<Point, NT> InnerBall;
   double tstart1 = (double)clock()/(double)CLOCKS_PER_SEC;
+  NT bd_plus = 0.0;
+  if (!user_randwalk) {
+      cdhr = false;
+      billiard = true;
+  }
   if (Zono) {
       InnerBall = ZP.ComputeInnerBall();
-      if (!user_randwalk) {
-          cdhr = false;
-          billiard = true;
-      }
       if (billiard && diameter < 0.0) ZP.comp_diam(diameter);
 
   } else if(!Vpoly) {
       InnerBall = HP.ComputeInnerBall();
-      if (billiard && diameter < 0.0) diameter = 2.0 * InnerBall.second;
+      if (billiard && diameter < 0.0) diameter = 2.0 * std::sqrt(NT(n)) * InnerBall.second;
   }else{
-
       if(BAN) {
-          if (round) {
-              InnerBall.first = VP.get_mean_of_vertices();
-              InnerBall.second = 0.0;
-              vars <NT, RNGType> var2(1, n, 1, n_threads, 0.0, e, 0, 0.0, 0, InnerBall.second, 2 * VP.get_max_vert_norm(),
-                                      rng, urdist, urdist1, -1, verbose, rand_only, round, NN, birk,
-                                      false, false, true, false, 0.0,0.0,0.0);
-              std::pair <NT, NT> res_round = rounding_min_ellipsoid(VP, InnerBall, var2);
-              round_val = res_round.first;
+          if (round || hpoly) {
+              if(test_round) {
+
+                  //std::cout<<"hello"<<std::endl;
+                  vars <NT, RNGType> var2(1, n, 1, n_threads, 0.0, e, 0, 0.0, 0, InnerBall.second, 2 * VP.get_max_vert_norm(),
+                                          rng, urdist, urdist1, -1, verbose, rand_only, round, NN, birk, ball_walk,
+                                          cdhr, rdhr, billiard, 0.0, 0.0, 0.0);
+                  Point pp =  VP.get_mean_of_vertices();
+                  NT diam_test;
+                  round_projection_of_poly(VP, pp, var2, round_val, diam_test);
+                  bd_plus += var2.BoundCalls;
+                  std::cout<<"bd_plus = "<<bd_plus<<std::endl;
+
+              } else {
+                  std::cout<<"rounding is on"<<std::endl;
+                  InnerBall.first = VP.get_mean_of_vertices();
+                  InnerBall.second = 0.0;
+                  vars <NT, RNGType> var2(1, n, 1, n_threads, 0.0, e, 0, 0.0, 0, InnerBall.second,
+                                          2 * VP.get_max_vert_norm(),
+                                          rng, urdist, urdist1, -1, verbose, rand_only, round, NN, birk,
+                                          false, false, true, false, 0.0, 0.0, 0.0);
+                  std::pair <NT, NT> res_round = rounding_min_ellipsoid(VP, InnerBall, var2);
+                  round_val = res_round.first;
+              }
               round = false;
               InnerBall.second = 0.0;
               InnerBall.first = Point(n);
@@ -442,13 +471,11 @@ int main(const int argc, const char** argv)
       } else {
           InnerBall = VP.ComputeInnerBall();
       }
-      if (!user_randwalk) {
-          cdhr = false;
-          billiard = true;
-      }
       if (billiard && diameter < 0.0) VP.comp_diam(diameter);
 
   }
+
+  std::cout<<"diameter = "<<diameter<<std::endl;
   double tstop1 = (double)clock()/(double)CLOCKS_PER_SEC;
   if(verbose) std::cout << "Inner ball time: " << tstop1 - tstart1 << std::endl;
   if(verbose){
@@ -458,7 +485,7 @@ int main(const int argc, const char** argv)
       }
       std::cout<<"\nradius is: "<<InnerBall.second<<std::endl;
   }
-  
+
   // Set the number of random walk steps
 
   if(!user_walk_len) {
@@ -492,13 +519,13 @@ int main(const int argc, const char** argv)
   double tstart, tstop;
 
   /* CONSTANTS */
-  //error in hit-and-run bisection of P 
+  //error in hit-and-run bisection of P
   const NT err=0.0000000001;
   const NT err_opt=0.01;
 
-  //bounds for the cube	
+  //bounds for the cube
   const int lw=0, up=10000, R=up-lw;
-  
+
 
 
   // If no file specified construct a default polytope
@@ -560,7 +587,7 @@ int main(const int argc, const char** argv)
 
   // the number of random points to be generated in each K_i
   int rnum = std::pow(e,-2) * 400 * n * std::log(n);
-  
+
   //RUN EXPERIMENTS
   int num_of_exp=nexp;
   double sum_time=0;
@@ -569,7 +596,7 @@ int main(const int argc, const char** argv)
   NT average, std_dev;
   double Chebtime, sum_Chebtime=double(0);
   NT vol, nballs;
-  
+
   for(unsigned int i=0; i<num_of_exp; ++i){
       std::cout<<"Experiment "<<i+1<<" ";
       tstart = (double)clock()/(double)CLOCKS_PER_SEC;
@@ -598,7 +625,7 @@ int main(const int argc, const char** argv)
           return 0;
       } else {
           // Estimate the volume
-          if (annealing) {
+          if (annealing && !BAN) {
 
               // setup the parameters
               vars<NT, RNGType> var2(rnum,n,10 + n/10,n_threads,err,e,0,0.0,0,InnerBall.second,diameter,rng,
@@ -629,7 +656,15 @@ int main(const int argc, const char** argv)
               } else if (!Vpoly) {
                   vol = volesti_ball_ann(HP, var, var_ban, InnerBall, nballs);
               } else {
-                  vol = round_val * volesti_ball_ann(VP, var, var_ban, InnerBall, nballs);
+                  if (!hpoly) {
+                      vol = volesti_ball_ann(VP, var, var_ban, InnerBall, nballs);
+                  } else {
+                      vars_g <NT, RNGType> varg(n, 1, N, 6 * n * n + 500, 1, e, InnerBall.second, rng, C, frac, ratio, delta,
+                                                false, verbose,
+                                                rand_only, false, false, birk, false, true, false,0.0,0.0);
+                      if(nfacets==0) nfacets = 10 * n;
+                      vol = hvol_vpoly < HPolytope < Point > > (VP, var, var_ban, varg, InnerBall, nballs, nfacets);
+                  }
               }
           } else {
               if (Zono) {
@@ -641,6 +676,7 @@ int main(const int argc, const char** argv)
               }
           }
       }
+      vol = vol * round_val;
 
       NT v1 = vol;
 
@@ -709,17 +745,17 @@ int main(const int argc, const char** argv)
                   <<sum_Chebtime/(i+1)<<" "
                     //<<usage.vsize
                   <<std::endl;
-    
+
       if(exactvol!=-1.0){
-	      std::cout 
+	      std::cout
 	           <<"\nExact volume= "
 	           <<exactvol<<" "
 	           <<"\n(vol-avg)/vol= "
 	           <<(exactvol-average)/exactvol<<" "
                <<std::endl;
       }
-	} else 
-    	std::cout 
+	} else
+    	std::cout
                  <<n<<" "
                  //<<argv[]<<" "
                  <<HP.num_of_hyperplanes()<<" "
@@ -741,10 +777,10 @@ int main(const int argc, const char** argv)
                  //<<usage.vsize
                  <<std::endl;
 	}
-	
+
   if(linear_extensions)
 		   std::cout <<"Number of linear extensions= "<<vol*factorial(n)<<std::endl;
-  
+
 	/*
   // EXACT COMPUTATION WITH POLYMAKE
   /*
@@ -757,6 +793,6 @@ int main(const int argc, const char** argv)
 	std::cout<<std::endl;
   */
   //}
-  
+
   return 0;
 }
