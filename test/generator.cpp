@@ -115,6 +115,11 @@ void create_txt(MT A, VT b, int kind, bool Vpoly, bool Zono) {
             name = poly + bar + std::to_string(d) + ine;
             outputFile.open(name);
             outputFile<<"skinny_cube_"<<d<<".ine\n";
+        } else if (kind == 6) {
+            std::string poly = "rhs";
+            name = poly + bar + std::to_string(d) + ine;
+            outputFile.open(name);
+            outputFile<<"rhs_"<<d<<".ine\n";
         } else {
             return;
         }
@@ -256,6 +261,7 @@ int main(const int argc, const char** argv) {
         std::cout<<"Wrong inputs, try -help"<<std::endl;
         exit(-1);
     }
+    if (Hpoly && rand) kind = 6;
 
     if (Zono) {
         if (m > 0) {
@@ -285,7 +291,14 @@ int main(const int argc, const char** argv) {
         }
     } else if (Hpoly) {
         Hpolytope HP;
-        if (cube) {
+        if (rand) {
+            if(m>d+1) {
+                HP = random_hpoly<Hpolytope, RNGType>(d, m);
+            }else {
+                std::cout << "the number of facets has to be >=d" << std::endl;
+                exit(-1);
+            }
+        }else if (cube) {
             HP = gen_cube<Hpolytope>(d, false);
         } else if (cross) {
             HP = gen_cross<Hpolytope>(d, false);

@@ -192,7 +192,7 @@ int main(const int argc, const char** argv)
           delta = atof(argv[++i]);
           correct = true;
       }
-      if(!strcmp(argv[i],"-Win")){
+      if(!strcmp(argv[i],"-WinLen")){
           W = atof(argv[++i]);
           user_W = true;
           correct = true;
@@ -212,6 +212,12 @@ int main(const int argc, const char** argv)
       }
       if(!strcmp(argv[i],"-N_an")){
           N = atof(argv[++i]);
+          user_N = true;
+          correct = true;
+      }
+      if(!strcmp(argv[i],"-nuN")){
+          N = atof(argv[++i]);
+          nu = atof(argv[++i]);
           user_N = true;
           correct = true;
       }
@@ -337,6 +343,14 @@ int main(const int argc, const char** argv)
       }
       if(!strcmp(argv[i],"-exp")){
           nexp = atof(argv[++i]);
+          correct = true;
+      }
+      if(!strcmp(argv[i],"-l")){
+          lb = atof(argv[++i]);
+          correct = true;
+      }
+      if(!strcmp(argv[i],"-u")){
+          ub = atof(argv[++i]);
           correct = true;
       }
       if(!strcmp(argv[i],"-t")||!strcmp(argv[i],"--threads")){
