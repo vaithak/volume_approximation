@@ -44,22 +44,22 @@ void comp_diam_hpoly_vpoly_inter2(ZonoHP &ZHP, MT V, MT AV, VT b, int m, Paramet
     Hpolytope HP = ret.first;
 
     std::pair<Point, NT> InnerBall = HP.ComputeInnerBall();
-    std::cout<<"Cheb center = "<<std::endl;
-    for (int j = 0; j < d; ++j) {
-        std::cout<<InnerBall.first[j]<<" ";
-    }
-    std::cout<<"\n";
+    //std::cout<<"Cheb center = "<<std::endl;
+    //for (int j = 0; j < d; ++j) {
+    //    std::cout<<InnerBall.first[j]<<" ";
+   // }
+    //std::cout<<"\n";
     //HP.normalize();
     boundary_rand_point_generator2(HP, InnerBall.first, 2*d*d, 1, randPoints, var);
-    std::cout<<"sampling done"<<std::endl;
+    //std::cout<<"sampling done"<<std::endl;
 
     MT T(ret.second.rows(), ret.second.cols()-1);
     for (int i = 0; i < ret.second.cols()-1; ++i) {
         T.col(i) = ret.second.col(i);
     }
     VT translation = ret.second.col(ret.second.cols()-1);
-    std::cout<<"T and translation done"<<std::endl;
-    std::cout<<"number of points = "<<randPoints.size()<<std::endl;
+    //std::cout<<"T and translation done"<<std::endl;
+    //std::cout<<"number of points = "<<randPoints.size()<<std::endl;
 
     typename std::list<Point>::iterator rpit=randPoints.begin();
     NT max_norm = 0.0, iter_norm;
@@ -141,7 +141,7 @@ void get_first_poly(VPolytope &VP, HPolytope &HP, NT lb, NT &up_lim, NT &ratio, 
         count++;
         q=Point(n);
         med = (u + l) * 0.5;
-        std::cout<<"u = "<<u<<" l = "<<l<<" med = "<<med<<std::endl;
+        //std::cout<<"u = "<<u<<" l = "<<l<<" med = "<<med<<std::endl;
         Zmed = Zs_min + (Zs_max-Zs_min)*med;
         HPiter.set_vec(Zmed);
         //variter.che_rad = HPiter.ComputeInnerBall().second;
@@ -152,7 +152,7 @@ void get_first_poly(VPolytope &VP, HPolytope &HP, NT lb, NT &up_lim, NT &ratio, 
         too_few = false;
 
         if(check_converg001<Point>(VP, randPoints, lb, up_lim, too_few, ratio, 10, 0.2, true, false)) {
-            std::cout<<"ratio = "<<ratio<<std::endl;
+            //std::cout<<"ratio = "<<ratio<<std::endl;
             HP.set_vec(Zmed);
             return;
         }
@@ -163,12 +163,12 @@ void get_first_poly(VPolytope &VP, HPolytope &HP, NT lb, NT &up_lim, NT &ratio, 
             l = med;
         }
         if(med>0.95) {
-            std::cout<<"ratio = "<<ratio<<std::endl;
+            //std::cout<<"ratio = "<<ratio<<std::endl;
             HP.set_vec(Zmed);
             return;
         }
         if(u-l<0.0000000001) {
-            std::cout << "fail to find first hpoly... repeat proccess" << std::endl;
+            //std::cout << "fail to find first hpoly... repeat proccess" << std::endl;
             //std::cout<<"origin is in = "<<P.is_in(Point(n))<<std::endl;
             u=1.0;
             l=0.0;
@@ -208,7 +208,7 @@ void get_hdelta(Polytope &P, HPolytope &HP, VT &Zs_max_gl, NT lb, NT &up_lim, NT
         count++;
         q=Point(n);
         med = (u + l) * 0.5;
-        std::cout<<"u = "<<u<<" l = "<<l<<" med = "<<med<<std::endl;
+        //std::cout<<"u = "<<u<<" l = "<<l<<" med = "<<med<<std::endl;
         Zmed = Zs_min + (Zs_max-Zs_min)*med;
         HPiter.set_vec(Zmed);
         //variter.che_rad = HPiter.ComputeInnerBall().second;
@@ -233,7 +233,7 @@ void get_hdelta(Polytope &P, HPolytope &HP, VT &Zs_max_gl, NT lb, NT &up_lim, NT
             return;
         }
         if(u-l<0.0000000001) {
-            std::cout << "fail to find first hpoly... repeat proccess" << std::endl;
+            //std::cout << "fail to find first hpoly... repeat proccess" << std::endl;
             //std::cout<<"origin is in = "<<P.is_in(Point(n))<<std::endl;
             u=1.0;
             l=0.0;
@@ -296,20 +296,20 @@ void get_sequence_of_zonopolys(Zonotope &Z, HPolytope &HP, std::vector<HPolytope
     NT ratio;
     std::list<Point> randPoints;
     Point q(n);
-    std::cout<<"sample = "<<Ntot<<" points"<<std::endl;
+    //std::cout<<"sample = "<<Ntot<<" points"<<std::endl;
     //std::cout<<"walk_step = "<<var.walk_steps<<std::endl;
     rand_point_generator(Z, q, Ntot, var.walk_steps, randPoints, var);
     var.TotSteps = var.TotSteps + NT(Ntot);
-    std::cout<<"points sampled"<<std::endl;
+    //std::cout<<"points sampled"<<std::endl;
     HPolytope HP2 = HP;
     if (check_converg001<Point>(HP, randPoints, p_value, up_lim, too_few, ratio, nu, alpha, false, true)) {
         ratios.push_back(ratio);
-        if(print) std::cout<<"last hpoly and ratio = "<<ratio<<std::endl;
+        //if(print) std::cout<<"last hpoly and ratio = "<<ratio<<std::endl;
         return;
     }
-    if(print) std::cout<<"not the last hpoly"<<std::endl;
+    //if(print) std::cout<<"not the last hpoly"<<std::endl;
     get_next_zonoball22(Z, HPolySet, HP2, Zs_max, HP.get_vec(), randPoints, ratios, p_value, up_lim, nu, alpha);
-    if(print) std::cout<<"get first hpoly"<<std::endl;
+    //if(print) std::cout<<"get first hpoly"<<std::endl;
 
     ZonoHP ZHP2;
     VT Zs_min = HP.get_vec();
@@ -319,19 +319,19 @@ void get_sequence_of_zonopolys(Zonotope &Z, HPolytope &HP, std::vector<HPolytope
         ZHP2 = ZonoHP(Z,HP2);
         q=Point(n);
         randPoints.clear();
-        std::cout<<"computing new diameter"<<std::endl;
+        //std::cout<<"computing new diameter"<<std::endl;
         comp_diam_hpoly_zono_inter2<HPolytope>(ZHP2, G, AG, HP2.get_vec(), var2, diams_inter);
-        std::cout<<"[annealing] diameter = "<<diams_inter[diams_inter.size()-1]<<std::endl;
+        //std::cout<<"[annealing] diameter = "<<diams_inter[diams_inter.size()-1]<<std::endl;
         var.diameter = diams_inter[diams_inter.size()-1];
         rand_point_generator(ZHP2, q, Ntot, var.walk_steps, randPoints, var);
         var.TotSteps = var.TotSteps + NT(Ntot);
         if (check_converg001<Point>(HP, randPoints, p_value, up_lim, too_few, ratio, nu, alpha, false, true)) {
             ratios.push_back(ratio);
-            if(print) std::cout<<"number of hpolys = "<<HPolySet.size()<<std::endl;
+            //if(print) std::cout<<"number of hpolys = "<<HPolySet.size()<<std::endl;
             return;
         }
         get_next_zonoball22(Z, HPolySet, HP2, HP2.get_vec(), Zs_min, randPoints, ratios, p_value, up_lim, nu, alpha);
-        if(print) std::cout<<"get hpoly"<<std::endl;
+        //if(print) std::cout<<"get hpoly"<<std::endl;
     }
 
 
@@ -359,20 +359,20 @@ void get_sequence_of_vpoly_hpolys(Vpolytope &VP, HPolytope &HP, std::vector<HPol
     NT ratio;
     std::list<Point> randPoints;
     Point q(n);
-    std::cout<<"sample = "<<Ntot<<" points"<<std::endl;
+    //std::cout<<"sample = "<<Ntot<<" points"<<std::endl;
     //std::cout<<"walk_step = "<<var.walk_steps<<std::endl;
     rand_point_generator(VP, q, Ntot, var.walk_steps, randPoints, var);
     var.TotSteps = var.TotSteps + NT(Ntot);
-    std::cout<<"points sampled"<<std::endl;
+    //std::cout<<"points sampled"<<std::endl;
     if (check_converg001<Point>(HP, randPoints, p_value, up_lim, too_few, ratio, nu, alpha, false, true)) {
         ratios.push_back(ratio);
-        if(print) std::cout<<"last hpoly and ratio = "<<ratio<<std::endl;
+        //if(print) std::cout<<"last hpoly and ratio = "<<ratio<<std::endl;
         return;
     }
     HPolytope HP2 = HP;
-    if(print) std::cout<<"not the last hpoly"<<std::endl;
+    //if(print) std::cout<<"not the last hpoly"<<std::endl;
     get_next_zonoball22(VP, HPolySet, HP2, Zs_max, HP.get_vec(), randPoints, ratios, p_value, up_lim, nu, alpha);
-    if(print) std::cout<<"get first hpoly"<<std::endl;
+    //if(print) std::cout<<"get first hpoly"<<std::endl;
 
     ZonoHP ZHP2;
     VT Zs_min = HP.get_vec();
@@ -383,37 +383,37 @@ void get_sequence_of_vpoly_hpolys(Vpolytope &VP, HPolytope &HP, std::vector<HPol
         ZHP2 = ZonoHP(VP,HP2);
         q=Point(n);
         randPoints.clear();
-        std::cout<<"computing new diameter"<<std::endl;
+        //std::cout<<"computing new diameter"<<std::endl;
         //comp_diam_hpoly_vpoly_inter2(ZonoHP &ZHP, MT V, NT AV, VT b, int m, Parameters &var, std::vector<NT> &diams_inter)
         //comp_diam_hpoly_vpoly_inter2<HPolytope>(ZHP2, V, AV, HP2.get_vec(), HP.num_of_hyperplanes(), var2, diams_inter);
         pair_diam = HP2.ComputeInnerBall_from_origin();
-        if (HP2.is_all_positive()){
-            std::cout<<"{ANN} all bi positives"<<std::endl;
-        } else {
-            std::cout<<"{ANN} NOT all bi positives!!"<<std::endl;
-        }
+        //if (HP2.is_all_positive()){
+            //std::cout<<"{ANN} all bi positives"<<std::endl;
+        //} else {
+            //std::cout<<"{ANN} NOT all bi positives!!"<<std::endl;
+        //}
         diams_inter.push_back(2.0*std::sqrt(NT(n))*pair_diam.second);
-        std::cout<<"[annealing] diameter = "<<diams_inter[diams_inter.size()-1]<<std::endl;
-        if (pair_diam.second <= 0.0) {
-            throw "unbounded";
-        }
-        pair_diam2 = HP2.ComputeInnerBall();
-        if (pair_diam2.second <= 0.0) {
-            std::cout<<"radius_from_LP = "<<pair_diam2.second<<std::endl;
-        }
+        //std::cout<<"[annealing] diameter = "<<diams_inter[diams_inter.size()-1]<<std::endl;
+        //if (pair_diam.second <= 0.0) {
+            //throw "unbounded";
+        //}
+        //pair_diam2 = HP2.ComputeInnerBall();
+        //if (pair_diam2.second <= 0.0) {
+            //std::cout<<"radius_from_LP = "<<pair_diam2.second<<std::endl;
+        //}
         var.diameter = diams_inter[diams_inter.size()-1];
-        std::cout<<"sampling N points from ZHP2, walk_length ="<<var.walk_steps<<std::endl;
+        //std::cout<<"sampling N points from ZHP2, walk_length ="<<var.walk_steps<<std::endl;
         rand_point_generator(ZHP2, q, Ntot, var.walk_steps, randPoints, var);
         var.TotSteps = var.TotSteps + NT(Ntot);
-        std::cout<<"Checking convergence"<<std::endl;
+        //std::cout<<"Checking convergence"<<std::endl;
         if (check_converg001<Point>(HP, randPoints, p_value, up_lim, too_few, ratio, nu, alpha, false, true)) {
             ratios.push_back(ratio);
-            if(print) std::cout<<"number of hpolys = "<<HPolySet.size()<<std::endl;
+            //if(print) std::cout<<"number of hpolys = "<<HPolySet.size()<<std::endl;
             return;
         }
-        std::cout<<"getting a new hpoly"<<std::endl;
+        //std::cout<<"getting a new hpoly"<<std::endl;
         get_next_zonoball22(VP, HPolySet, HP2, HP2.get_vec(), Zs_min, randPoints, ratios, p_value, up_lim, nu, alpha);
-        if(print) std::cout<<"got hpoly"<<std::endl;
+        //if(print) std::cout<<"got hpoly"<<std::endl;
     }
 
 

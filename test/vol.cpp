@@ -61,7 +61,7 @@ int main(const int argc, const char** argv)
     typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
     int n, nexp=1, n_threads=1, W, nfacets = 0;
     int walk_len,N, nsam = 100, nu = 10;
-    NT e=1;
+    NT e=0.1;
     NT exactvol(-1.0), a=0.5;
     bool verbose=false,
 	 rand_only=false,
@@ -77,7 +77,7 @@ int main(const int argc, const char** argv)
          ball_rad=false,
          experiments=true,
          annealing = false,
-         BAN = false,
+         BAN = true,
          hpoly = false,
          Vpoly=false,
          Zono=false,
@@ -377,6 +377,7 @@ int main(const int argc, const char** argv)
       }
       if(!strcmp(argv[i],"-cg")){
           annealing = true;
+          BAN = false;
           e=0.1;
           correct = true;
       }
@@ -434,9 +435,15 @@ int main(const int argc, const char** argv)
   std::pair<Point, NT> InnerBall;
   double tstart1 = (double)clock()/(double)CLOCKS_PER_SEC;
   NT bd_plus = 0.0;
-  if (!user_randwalk) {
+  if (!user_randwalk && BAN) {
+      //std::cout<<"set billiard as default"<<std::endl;
       cdhr = false;
       billiard = true;
+  }
+  if (!user_randwalk && annealing) {
+      //std::cout<<"set rdhr as default"<<std::endl;
+      cdhr = false;
+      rdhr = true;
   }
   if (Zono) {
       InnerBall = ZP.ComputeInnerBall();
@@ -458,10 +465,10 @@ int main(const int argc, const char** argv)
                   NT diam_test;
                   round_projection_of_poly(VP, pp, var2, round_val, diam_test);
                   bd_plus += var2.BoundCalls;
-                  std::cout<<"bd_plus = "<<bd_plus<<std::endl;
+                  //std::cout<<"bd_plus = "<<bd_plus<<std::endl;
 
               } else {
-                  std::cout<<"rounding is on"<<std::endl;
+                  //std::cout<<"rounding is on"<<std::endl;
                   InnerBall.first = VP.get_mean_of_vertices();
                   InnerBall.second = 0.0;
                   vars <NT, RNGType> var2(1, n, 1, n_threads, 0.0, e, 0, 0.0, 0, InnerBall.second,
@@ -489,7 +496,7 @@ int main(const int argc, const char** argv)
 
   }
 
-  std::cout<<"diameter = "<<diameter<<std::endl;
+  //std::cout<<"diameter = "<<diameter<<std::endl;
   double tstop1 = (double)clock()/(double)CLOCKS_PER_SEC;
   if(verbose) std::cout << "Inner ball time: " << tstop1 - tstart1 << std::endl;
   if(verbose){
@@ -503,7 +510,7 @@ int main(const int argc, const char** argv)
   // Set the number of random walk steps
 
   if(!user_walk_len) {
-      if(!annealing) {
+      if(!annealing && !BAN) {
           walk_len = 10 + n / 10;
       }else{
           walk_len = 1;
@@ -612,7 +619,7 @@ int main(const int argc, const char** argv)
   NT vol, nballs;
 
   for(unsigned int i=0; i<num_of_exp; ++i){
-      std::cout<<"Experiment "<<i+1<<" ";
+      //std::cout<<"Experiment "<<i+1<<" ";
       tstart = (double)clock()/(double)CLOCKS_PER_SEC;
 
       // Setup the parameters
@@ -655,6 +662,11 @@ int main(const int argc, const char** argv)
               } else {
                   vol = volume_gaussian_annealing(VP, var1, var2, InnerBall, nballs);
               }
+              var.BoundCalls = var1.BoundCalls;
+              //var.TotSteps = var1.TotSteps;
+              std::cout<<"----------------\n";
+              std::cout<<"estimated volume = "<< vol*round_val<<"\nnumber of Gaussians in MMC = "<<nballs<<"\nnumber of Boundary Oracle Calls = "<<var.BoundCalls + bd_plus<<std::endl;
+              return -1.0;
 
           } else if (BAN) {
               vars_ban <NT> var_ban(lb, ub, p, rmax, alpha, W, N, nu, win2);
@@ -662,7 +674,7 @@ int main(const int argc, const char** argv)
                   if (!hpoly) {
                       vol = volesti_ball_ann(ZP, var, var_ban, InnerBall,nballs);
                   } else {
-                      vars_g <NT, RNGType> varg(n, 1, N, 6 * n * n + 500, 1, e, InnerBall.second, rng, C, frac, ratio, delta,
+                      vars_g <NT, RNGType> varg(n, 1, 500 * 2.0 +  NT(n * n) / 2.0, 6 * n * n + 500, 1, e, InnerBall.second, rng, C, frac, ratio, delta,
                                                 false, verbose,
                                                 rand_only, false, false, birk, false, true, false,0.0,0.0);
                       vol = vol_hzono < HPolytope < Point > > (ZP, var, var_ban, varg, InnerBall,nballs);
@@ -673,13 +685,16 @@ int main(const int argc, const char** argv)
                   if (!hpoly) {
                       vol = volesti_ball_ann(VP, var, var_ban, InnerBall, nballs);
                   } else {
-                      vars_g <NT, RNGType> varg(n, 1, N, 6 * n * n + 500, 1, e, InnerBall.second, rng, C, frac, ratio, delta,
+                      vars_g <NT, RNGType> varg(n, 1, 500 * 2.0 +  NT(n * n) / 2.0, 6 * n * n + 500, 1, e, InnerBall.second, rng, C, frac, ratio, delta,
                                                 false, verbose,
                                                 rand_only, false, false, birk, false, true, false,0.0,0.0);
                       if(nfacets==0) nfacets = 10 * n;
                       vol = hvol_vpoly < HPolytope < Point > > (VP, var, var_ban, varg, InnerBall, nballs, nfacets);
                   }
               }
+              tstop = (double)clock()/(double)CLOCKS_PER_SEC;
+              std::cout<<"volume = "<< vol*round_val<<"\nnumber of bodies in MMC = "<<nballs<<"\nnumber of Boundary Oracle Calls = "<<var.BoundCalls + bd_plus<<"\ntime = "<<tstop-tstart<<" sec"<<std::endl;
+              return -1.0;
           } else {
               if (Zono) {
                   vol = volume(ZP, var, InnerBall);

@@ -42,7 +42,7 @@ NT hvol_vpoly (Vpolytope &VP, UParameters &var, AParameters &var_ban, GParameter
     Hpolytope HP(n);
     ball1 B0;
     enclosing_ball(VP, B0, var3);
-    std::cout<<"B0.rad = "<<B0.radius()<<std::endl;
+    //std::cout<<"B0.rad = "<<B0.radius()<<std::endl;
     BallPoly BP(HP, B0);
     construct_hpoly(VP, HP, BP, 10+n, k, var3);
     Hpolytope HP3;
@@ -69,13 +69,13 @@ NT hvol_vpoly (Vpolytope &VP, UParameters &var, AParameters &var_ban, GParameter
 
     //var3.walk_steps = 1;
 
-    if(verbose) std::cout<<"computing hpoly annealing.. = "<<vol<<"\ne="<<e<<std::endl;
-    std::cout<<"N = "<<N<<" nu = "<< nu<<std::endl;
-    if (HP3.is_all_positive()){
-        std::cout<<"all bi positives"<<std::endl;
-    } else {
-        std::cout<<"NOT all bi positives!!"<<std::endl;
-    }
+    std::cout<<"computing hpoly annealing..."<<std::endl;
+    //std::cout<<"N = "<<N<<" nu = "<< nu<<std::endl;
+    //if (HP3.is_all_positive()){
+    //    std::cout<<"all bi positives"<<std::endl;
+    //} else {
+    //    std::cout<<"NOT all bi positives!!"<<std::endl;
+    //}
     get_sequence_of_vpoly_hpolys<ZonoHP>(VP, HP3, HPolySet, ratios, N*nu, nu, lb, ub, alpha, var, var3, diams_inter);
     var.diameter = diam0;
     nballs = NT(HPolySet.size()+1);
@@ -95,13 +95,14 @@ NT hvol_vpoly (Vpolytope &VP, UParameters &var, AParameters &var_ban, GParameter
     NT Her = e/(2.0*std::sqrt(NT(mm2)));
 
     var_g.error = Her/2.0;
-    std::cout<<"computing vol of h-polytope = "<<vol<<"e = "<<e<<std::endl;
+    std::cout<<"computing vol of h-polytope...\n"<<std::endl;
     NT fake_nballs;
     //BallPoly BP2(HP, B0);
     //std::pair<Point, NT> InnerBall2 = BP2.ComputeInnerBall();
     vol = volume_gaussian_annealing(HP3, var_g, var, InnerBall, fake_nballs);
 
-    if(verbose) std::cout<<"\nvol of h-polytope = "<<vol<<"\n"<<std::endl;
+    //std::cout<<"\nvol of h-polytope = "<<vol<<"\n"<<std::endl;
+     std::cout<<"Estimating the ratios...\n"<<std::endl;
     if (!window2) {
         UParameters var2 = var;
         var2.cdhr_walk = true;

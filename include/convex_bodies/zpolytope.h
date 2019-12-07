@@ -68,7 +68,8 @@ public:
         num_of_hyp = nom / denom;
 
         res = 2*_d;
-        return res;
+        std::cout<<"num_of_facets = "<<num_of_hyp<<std::endl;
+        return num_of_hyp;
     }
 
     void compute_eigenvectors(MT G, bool norm1, bool norm2) {

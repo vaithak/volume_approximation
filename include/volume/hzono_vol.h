@@ -77,7 +77,7 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
     HP.init(n,A3,b);
 
     VT Zs_max(2*m);
-    if(verbose) std::cout<<"get first hpoly.. = "<<vol<<"\ne="<<e<<std::endl;
+    std::cout<<"get first hpoly..."<<std::endl;
     UParameters var3 = var;
     var3.cdhr_walk = true;
     var3.ball_walk = false;
@@ -100,8 +100,8 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
 
     //var3.walk_steps = 1;
 
-    if(verbose) std::cout<<"computing hpoly annealing.. = "<<vol<<"\n"<<std::endl;
-    std::cout<<"N = "<<N<<" nu = "<< nu<<std::endl;
+    std::cout<<"computing hpoly annealing..."<<std::endl;
+    //std::cout<<"N = "<<N<<" nu = "<< nu<<std::endl;
     get_sequence_of_zonopolys<ZonoHP>(ZP, HP2, HPolySet, Zs_max, ratios, N*nu, nu, lb, ub, alpha, var, var3, diams_inter);
     var.diameter = diam0;
     nballs = NT(HPolySet.size()+1);
@@ -118,11 +118,12 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
     NT Her = e/(2.0*std::sqrt(NT(mm2)));
 
     var_g.error = Her/2.0;
-    std::cout<<"computing vol of h-polytope = "<<vol<<std::endl;
+    std::cout<<"computing vol of h-polytope... error = "<<Her/2.0<<std::endl;
     NT fake_nballs;
     vol = volume_gaussian_annealing(HP, var_g, var, InnerBall, fake_nballs);
 
     if(verbose) std::cout<<"\nvol of h-polytope = "<<vol<<"\n"<<std::endl;
+    std::cout<<"Estimating the ratios..."<<std::endl;
     if (!window2) {
         UParameters var2 = var;
         var2.cdhr_walk = true;

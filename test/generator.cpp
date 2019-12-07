@@ -57,13 +57,13 @@ void create_txt(MT A, VT b, int kind, bool Vpoly, bool Zono) {
         }
     }else if(Vpoly) {
         if (kind == 4) {
-            std::string poly = "RandV_cube";
+            std::string poly = "rvc";
             name = poly + bar + std::to_string(d) + bar + std::to_string(m) + ext;
             outputFile.open(name);
             outputFile << name << "\n";
             outputFile << "V-representation\n";
         } else if (kind == 5) {
-            std::string poly = "RandV_sphere";
+            std::string poly = "rvs";
             name = poly + bar + std::to_string(d) + bar + std::to_string(m) + ext;
             outputFile.open(name);
             outputFile << name << "\n";
@@ -117,9 +117,9 @@ void create_txt(MT A, VT b, int kind, bool Vpoly, bool Zono) {
             outputFile<<"skinny_cube_"<<d<<".ine\n";
         } else if (kind == 6) {
             std::string poly = "rhs";
-            name = poly + bar + std::to_string(d) + ine;
+            name = poly + bar + std::to_string(d) + bar + std::to_string(m) + ine;
             outputFile.open(name);
-            outputFile<<"rhs_"<<d<<".ine\n";
+            outputFile<<"rhs_"<<d<<"_"<<m<<".ine\n";
         } else {
             return;
         }

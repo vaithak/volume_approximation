@@ -131,7 +131,7 @@ void construct_hpoly(Vpolytope &VP, Hpolytope &HP, PolyBall &PB, int walkL, int 
         }
 
     }
-    std::cout<<"\nChebychev radius in hpoly construction = "<<rad<<", num_of_hyps = "<<HP.num_of_hyperplanes()<<"\n"<<std::endl;
+    std::cout<<"\nnumber of facets computed = "<<HP.num_of_hyperplanes()<<"\n"<<std::endl;
 
 }
 
