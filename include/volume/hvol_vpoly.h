@@ -95,7 +95,7 @@ NT hvol_vpoly (Vpolytope &VP, UParameters &var, AParameters &var_ban, GParameter
     NT Her = e/(2.0*std::sqrt(NT(mm2)));
 
     var_g.error = Her/2.0;
-    std::cout<<"computing vol of h-polytope...\n"<<std::endl;
+    std::cout<<"computing vol of h-polytope..."<<std::endl;
     NT fake_nballs;
     //BallPoly BP2(HP, B0);
     //std::pair<Point, NT> InnerBall2 = BP2.ComputeInnerBall();

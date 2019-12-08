@@ -77,7 +77,7 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
     HP.init(n,A3,b);
 
     VT Zs_max(2*m);
-    std::cout<<"get first hpoly..."<<std::endl;
+    std::cout<<"\nget first hpoly..."<<std::endl;
     UParameters var3 = var;
     var3.cdhr_walk = true;
     var3.ball_walk = false;
@@ -118,12 +118,12 @@ NT vol_hzono (Zonotope &ZP, UParameters &var, AParameters &var_ban, GParameters 
     NT Her = e/(2.0*std::sqrt(NT(mm2)));
 
     var_g.error = Her/2.0;
-    std::cout<<"computing vol of h-polytope... error = "<<Her/2.0<<std::endl;
+    std::cout<<"computing vol of h-polytope..."<<std::endl;
     NT fake_nballs;
     vol = volume_gaussian_annealing(HP, var_g, var, InnerBall, fake_nballs);
 
     if(verbose) std::cout<<"\nvol of h-polytope = "<<vol<<"\n"<<std::endl;
-    std::cout<<"Estimating the ratios..."<<std::endl;
+    std::cout<<"Estimating the ratios...\n"<<std::endl;
     if (!window2) {
         UParameters var2 = var;
         var2.cdhr_walk = true;

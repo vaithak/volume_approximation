@@ -69,7 +69,7 @@ NT volesti_ball_ann(Polytope &P, UParameters &var, AParameters &var_ban, std::pa
     P.shift(c_e);
     P.normalize();
 
-    std::cout << "\n\nComputing ball annealing..." << std::endl;
+    std::cout << "\nComputing ball annealing..." << std::endl;
     //std::cout<<"N = "<<N<<" nu = "<< nu<<" e = "<<e<<std::endl;
     get_sequence_of_polyballs<PolyBall, RNGType>(P, BallSet, ratios, N * nu, nu, lb, ub, radius, alpha, var, rmax);
     var.diameter = diam;

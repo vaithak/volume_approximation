@@ -31,6 +31,7 @@
 #include "sample_only.h"
 #include "exact_vols.h"
 #include "simplex_samplers.h"
+#include "zono_over_approx.h"
 
 
 //////////////////////////////////////////////////////////
@@ -96,7 +97,7 @@ int main(const int argc, const char** argv)
     Zonotope  ZP;
 
     // parameters of CV algorithm
-    bool user_W=false, user_N=false, user_ratio=false;
+    bool user_W=false, user_N=false, user_ratio=false, pca = false;
     NT ball_radius=0.0, diameter = -1.0, lb = 0.1, ub = 0.15, p = 0.75, rmax = 0.0, alpha = 0.2, round_val = 1.0;
     NT C=2.0,ratio,frac=0.1,delta=-1.0,error=0.1;
 
@@ -170,8 +171,13 @@ int main(const int argc, const char** argv)
           std::cout<<"Generate random points only\n";
           correct = true;
       }
+      if(!strcmp(argv[i],"-pca")){
+          pca = true;
+          correct = true;
+      }
       if(!strcmp(argv[i],"-rdhr")){
           cdhr = false;
+          billiard = false;
           rdhr = true;
           user_randwalk = true;
           correct = true;
@@ -336,7 +342,7 @@ int main(const int argc, const char** argv)
           nfacets = atof(argv[++i]);
           correct = true;
       }
-      if(!strcmp(argv[i],"-w")||!strcmp(argv[i],"--walk_len")){
+      if(!strcmp(argv[i],"-w")||!strcmp(argv[i],"-WalkL")){
           walk_len = atof(argv[++i]);
           user_walk_len = true;
           correct = true;
@@ -421,7 +427,7 @@ int main(const int argc, const char** argv)
 
   if (exact_zono) {
       NT vol_ex = exact_zonotope_vol<NT>(ZP);
-      std::cout<<"Zonotope's exact volume = "<<vol_ex<<std::endl;
+      std::cout<<"Z-polytope's exact volume = "<<vol_ex<<std::endl;
       return 0;
   }
    /* RANDOM NUMBERS */
@@ -451,6 +457,10 @@ int main(const int argc, const char** argv)
 
   } else if(!Vpoly) {
       InnerBall = HP.ComputeInnerBall();
+      if (InnerBall.second < 0.0) {
+          std::cout<<"Polytope is unbounded!"<<std::endl;
+          return -1.0;
+      }
       if (billiard && diameter < 0.0) diameter = 2.0 * std::sqrt(NT(n)) * InnerBall.second;
   }else{
       if(BAN) {
@@ -617,7 +627,13 @@ int main(const int argc, const char** argv)
   NT average, std_dev;
   double Chebtime, sum_Chebtime=double(0);
   NT vol, nballs;
-
+  if(BAN){
+      if (user_W){
+          std::cout<<"\nWindow's length = "<<W<<", N = "<<N<<", nu = "<<nu<<", lower bound of ratios = "<<lb<<", upper bound of ratios = "<<ub<<", walk length = "<<walk_len<<", requested error = "<<e<<std::endl;
+      } else {
+          std::cout<<"\nWindow's length = "<<125<<", N = "<<N<<", nu = "<<nu<<", lower bound of ratios = "<<lb<<", upper bound of ratios = "<<ub<<", walk length = "<<walk_len<<", requested error = "<<e<<std::endl;
+      }
+  }
   for(unsigned int i=0; i<num_of_exp; ++i){
       //std::cout<<"Experiment "<<i+1<<" ";
       tstart = (double)clock()/(double)CLOCKS_PER_SEC;
@@ -645,6 +661,10 @@ int main(const int argc, const char** argv)
           std::cout << "end\n--------------\n" << std::endl;
           return 0;
       } else {
+          if(pca) {
+              zono_approx<Hpolytope> (ZP, hpoly);
+              return -1.0;
+          }
           // Estimate the volume
           if (annealing && !BAN) {
 
@@ -664,8 +684,9 @@ int main(const int argc, const char** argv)
               }
               var.BoundCalls = var1.BoundCalls;
               //var.TotSteps = var1.TotSteps;
+              tstop = (double)clock()/(double)CLOCKS_PER_SEC;
               std::cout<<"----------------\n";
-              std::cout<<"estimated volume = "<< vol*round_val<<"\nnumber of Gaussians in MMC = "<<nballs<<"\nnumber of Boundary Oracle Calls = "<<var.BoundCalls + bd_plus<<std::endl;
+              std::cout<<"estimated volume = "<< vol*round_val<<"\nnumber of Gaussians in MMC = "<<nballs<<"\nnumber of Boundary Oracle Calls = "<<var.BoundCalls + bd_plus<<"\ntime = "<<tstop-tstart<<" sec"<<std::endl;
               return -1.0;
 
           } else if (BAN) {

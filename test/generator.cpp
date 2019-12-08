@@ -37,19 +37,19 @@ void create_txt(MT A, VT b, int kind, bool Vpoly, bool Zono) {
             outputFile << name << "\n";
             outputFile << "Zonotpe\n";
         } else if (kind == 2) {
-            std::string poly = "zonotope_g";
+            std::string poly = "zonotope";
             name = poly + bar + std::to_string(d) + bar + std::to_string(m) + ext;
             outputFile.open(name);
             outputFile << name << "\n";
             outputFile << "Zonotpe\n";
         } else if (kind == 3) {
-            std::string poly = "zonotope_u";
+            std::string poly = "zonotope";
             name = poly + bar + std::to_string(d) + bar + std::to_string(m) + ext;
             outputFile.open(name);
             outputFile << name << "\n";
             outputFile << "Zonotpe\n";
         } else if (kind == 4) {
-            std::string poly = "zonotope_exp";
+            std::string poly = "zonotope";
             name = poly + bar + std::to_string(d) + bar + std::to_string(m) + ext;
             outputFile.open(name);
             outputFile << name << "\n";
@@ -190,7 +190,7 @@ int main(const int argc, const char** argv) {
         if(!strcmp(argv[i],"-zonotope")) {
             Zono = true;
             Vpoly = true;
-            kind = 0;
+            kind = 1;
             correct = true;
         }
         if(!strcmp(argv[i],"-cube")) {
@@ -268,15 +268,15 @@ int main(const int argc, const char** argv) {
             Zonotope ZP;
             switch (kind) {
                 case 1:
-                    std::cout<<"uniform"<<std::endl;
+                    //std::cout<<"uniform"<<std::endl;
                     ZP = gen_zonotope_uniform<Zonotope, RNGType>(d, m);
                     break;
                 case 2:
-                    std::cout<<"gaussian"<<std::endl;
+                    //std::cout<<"gaussian"<<std::endl;
                     ZP = gen_zonotope_gaussian<Zonotope, RNGType>(d, m);
                     break;
                 case 3:
-                    std::cout<<"exponential"<<std::endl;
+                    //std::cout<<"exponential"<<std::endl;
                     ZP = gen_zonotope_exponential<Zonotope, RNGType>(d, m);
                     break;
                 case 4:
