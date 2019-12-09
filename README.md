@@ -43,6 +43,11 @@ Will generate a Gaussian 10-dimensional Z-polytope with 15 generators and estima
 ./vol -f3 zonotope_10_15.ext -exact_zono
 ```
 
+- To estimate the volume with CoolingGaussians method use flag `-cg`  
+```
+./vol -f3 zonotope_10_15.ext -cg
+```
+
 #### 2. V-polytopes (Table 3):  
 
 - Generate a cross polytope in V-representation and in dimension `dim` and estimate the volume:  

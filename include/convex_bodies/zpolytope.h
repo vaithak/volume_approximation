@@ -68,7 +68,7 @@ public:
         num_of_hyp = nom / denom;
 
         res = 2*_d;
-        std::cout<<"num_of_facets = "<<num_of_hyp<<std::endl;
+        //std::cout<<"num_of_facets = "<<num_of_hyp<<std::endl;
         return num_of_hyp;
     }
 
