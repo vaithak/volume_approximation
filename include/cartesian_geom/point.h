@@ -10,151 +10,184 @@
 #define POINT_H
 
 #include <iostream>
+//#include "Eigen"
+
 
 template <class K>
 class point
 {
 private:
     unsigned int d;
-    typedef std::vector<typename K::FT> Coeff;
+
+    typedef typename K::VT Coeff;
+    typedef typename K::MT MT;
+    //typedef Eigen::Matrix<typename K::FT,Eigen::Dynamic,Eigen::Dynamic> MT;
+
     Coeff coeffs;
     typedef typename std::vector<typename K::FT>::iterator iter;
 public:
     typedef typename K::FT 	FT;
 
     point() {}
-    
-    point(const unsigned int dim) {
+
+    point(const unsigned int& dim) {
         d = dim;
-        coeffs = Coeff(d,0);
+        coeffs.setZero(d);
     }
-    
+
+    point(const Coeff& coeffs) {
+        d = coeffs.rows();
+        this->coeffs = coeffs;
+    }
+
     point(const unsigned int dim, iter begin, iter endit) {
         d = dim;
-        coeffs = Coeff(begin,endit);
+        coeffs.resize(d);
+        int i = 0;
+
+        for (iter it=begin ; it != endit ; it++)
+            coeffs(i++) = *it;
     }
-    
-    int dimension() {
+
+    const Coeff& getCoefficients() const {
+        return coeffs;
+    }
+
+    int dimension() const {
         return d;
     }
-    
+
     void set_dimension(const unsigned int dim) {
         d = dim;
     }
-    
+
     void set_coord(const unsigned int i, FT coord) {
-        coeffs[i] = coord;
+        coeffs(i) = coord;
     }
-    
-    FT operator[] (const unsigned int i) {
-        return coeffs[i];
+
+    void set(const Coeff& vector) {
+        this->coeffs.noalias() = vector;
     }
-    
-    point operator+ (point& p) {
-        point temp(p.dimension());
 
-        typename Coeff::iterator tmit = temp.iter_begin();
-        typename Coeff::iterator pit = p.iter_begin();
-        typename Coeff::iterator mit = coeffs.begin();
-
-        for (; pit < p.iter_end(); ++pit, ++mit, ++tmit) {
-            (*tmit) = (*pit) + (*mit);
-        }
-        return temp;
+    FT operator[] (const unsigned int& i) const {
+        return coeffs(i);
     }
-    
-    point operator- (point& p) {
-        point temp(p.dimension());
 
-        typename Coeff::iterator tmit = temp.iter_begin();
-        typename Coeff::iterator pit = p.iter_begin();
-        typename Coeff::iterator mit = coeffs.begin();
-
-        for (; pit < p.iter_end(); ++pit, ++mit, ++tmit) {
-            (*tmit) = (*mit) - (*pit);
-        }
+    point operator+ (const point& p) const {
+        point temp;
+        temp.d = d;
+        temp.coeffs = coeffs + p.getCoefficients();
         return temp;
     }
 
-    point operator* (const FT& k) {
-        point temp(d, iter_begin(), iter_end());
+    void add(const Coeff& coeffs) {
+        this->coeffs = coeffs + this->coeffs;
+    }
 
-        typename Coeff::iterator tmit = temp.iter_begin();
+    void operator+= (const point& p)  {
+        this->coeffs += p.coeffs;
+    }
 
-        for (; tmit < temp.iter_end(); ++tmit) {
-            (*tmit) *= k;
-        }
+    void operator*= (const FT& k)  {
+        this->coeffs *= k;
+    }
+
+    void operator/= (const FT& k)  {
+        this->coeffs /= k;
+    }
+
+    void operator-= (const point& p)  {
+        this->coeffs -= p.coeffs;
+    }
+
+    point operator- (const point& p) const{
+        point temp;
+        temp.d = d;
+        temp.coeffs = coeffs - p.getCoefficients();
         return temp;
     }
 
+    point operator* (const FT& k) const {
+        point temp;
+        temp.d = d;
+        temp.coeffs = coeffs * k;
+        return temp;
+    }
 
-    bool operator== (point& p) {
+    point operator/ (const FT& k) const{
+        point temp;
+        temp.d = d;
+        temp.coeffs = coeffs / k;
+        return temp;
+    }
 
-        typename Coeff::iterator pit = p.iter_begin();
-        typename Coeff::iterator mit = coeffs.begin();
+    bool operator== (const point& p) const{//TODO check dim?
+        int i=0;
 
         /* degree of approximation in
         "The art of computer programming" (vol II), p. 234, Donald. E. Knuth. */
         FT e = 0.00000000001;
 
-        for ( ;  pit!=p.iter_end(); ++pit, ++mit) {
-            if (std::abs(*mit - *pit) > e * std::abs(*mit) ||
-                std::abs(*mit - *pit) > e * std::abs(*pit))
+        for (i=0 ; i<d ; i++) {
+            if (std::abs(coeffs(i) - p[i]) > e * std::abs(p[i]) ||
+                std::abs(coeffs(i) - p[i]) > e * std::abs(coeffs(i))){
                 return false;
+            }
         }
 
         return true;
     }
 
 
-    FT dot(point& p){
-        FT res=FT(0.0);
-
-        typename Coeff::iterator pit=p.iter_begin();
-        typename Coeff::iterator mit=coeffs.begin();
-        for( ; pit<p.iter_end(); ++pit, ++mit){
-            res+=(*mit)*(*pit);
-        }
-        return res;
+    FT dot(const point& p) const{
+        return coeffs.dot(p.getCoefficients());
     }
-    
-    
+
+    point matrix_left_product(const MT& matrix) const {
+        return point(matrix* coeffs);
+    }
+
+    double normalize() {
+        double norm = coeffs.norm();
+        this->coeffs.normalize();
+        return norm;
+    }
+
     FT squared_length() {
 
         FT lsq = FT(0.0);
 
-        typename Coeff::iterator mit=coeffs.begin();
-        for ( ; mit != coeffs.end(); mit++){
-            lsq += (*mit)*(*mit);
+        for (int i=0; i<d ; i++){
+            lsq += coeffs(i) * coeffs(i);
         }
         return lsq;
+        // TODO: return std::pow(coeffs.norm(), FT(2.0));
     }
 
     void print(){
         for(unsigned int i=0; i<d; i++){
-            #ifdef VOLESTI_DEBUG
-            std::cout<<coeffs[i]<<" ";
-            #endif
+#ifdef VOLESTI_DEBUG
+            std::cout<<coeffs(i)<<" ";
+#endif
         }
-        #ifdef VOLESTI_DEBUG
+#ifdef VOLESTI_DEBUG
         std::cout<<"\n";
-        #endif
+#endif
     }
-    
-    
-    iter iter_begin() {
-        return coeffs.begin();
-    }
-    
-    iter iter_end() {
-        return coeffs.end();
-    }
-    
-    
+
+
+//    iter iter_begin() {
+//        return coeffs.begin();
+//    }
+//
+//    iter iter_end() {
+//        return coeffs.end();
+//    }
+
 };
 
 template<class K>
-point<K> operator* (const typename K::FT& k, point<K>& p) {
+point<K> operator* (const typename K::FT& k, const point<K>& p) {
     return p * k;
 }
 

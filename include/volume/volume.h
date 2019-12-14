@@ -36,6 +36,7 @@
 //#include "sample_only.h"
 #include "misc.h"
 #include "linear_extensions.h"
+#include "spectrahedron.h"
 //#include "polytope_generators.h"
 //#include "exact_vols.h"
 //#include "simplex_samplers.h"
@@ -47,7 +48,7 @@ NT volume(Polytope &P,
           Parameters & var,  // constans for volume
           std::pair<Point,NT> InnerBall)  //Chebychev ball
 {
- 
+
     typedef Ball<Point> Ball;
     typedef BallIntersectPolytope<Polytope,Ball> BallPoly;
     typedef typename Parameters::RNGType RNGType;
@@ -72,7 +73,7 @@ NT volume(Polytope &P,
             deltaset = true;
         }
     }
-    
+
     //1. Rounding of the polytope if round=true
     NT round_value=1;
     if(round){
@@ -105,9 +106,9 @@ NT volume(Polytope &P,
 
     rnum=rnum/n_threads;
     NT vol=0;
-        
-        
-        
+
+
+
     // Perform the procedure for a number of threads and then take the average
     for(unsigned int t=0; t<n_threads; t++){
         // 2. Generate the first random point in P
@@ -115,23 +116,23 @@ NT volume(Polytope &P,
         #ifdef VOLESTI_DEBUG
         if(print) std::cout<<"\nGenerate the first random point in P"<<std::endl;
         #endif
-        
+
         Point p = get_point_on_Dsphere<RNGType , Point>(n, radius);
         //p=p+c;
-        
+
         std::list<Point> randPoints; //ds for storing rand points
         //use a large walk length e.g. 1000
-        
+
         rand_point_generator(P, p, 1, 50*n, randPoints, var);
         double tstart2 = (double)clock()/(double)CLOCKS_PER_SEC;
-        
-        
+
+
         // 3. Sample "rnum" points from P
         #ifdef VOLESTI_DEBUG
         if(print) std::cout<<"\nCompute "<<rnum<<" random points in P"<<std::endl;
         #endif
         rand_point_generator(P, p, rnum-1, walk_len, randPoints, var);
-        
+
         double tstop2 = (double)clock()/(double)CLOCKS_PER_SEC;
         #ifdef VOLESTI_DEBUG
         if(print) std::cout << "First random points construction time = " << tstop2 - tstart2 << std::endl;
@@ -161,7 +162,7 @@ NT volume(Polytope &P,
         #endif
 
         std::vector<Ball> balls;
-        
+
         for(int i=nb1; i<=nb2; ++i){
 
             if(i==nb1){

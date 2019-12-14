@@ -1,4 +1,4 @@
-PKG_CPPFLAGS=-I../../external/boost -I../../external/LPsolve_src/run_headers -I../../external/minimum_ellipsoid -I../../include -I../../include/volume -I../../include/generators -I../../include/samplers -I../../include/annealing -I../../include/convex_bodies
+PKG_CPPFLAGS= -I../../external/boost -I../../external/LPsolve_src/run_headers -I../../external/minimum_ellipsoid -I../../include -I../../include/optimization -I../../include/volume -I../../include/generators -I../../include/samplers -I../../include/annealing -I../../include/convex_bodies
 PKG_CXXFLAGS= -lm -ldl -Wno-ignored-attributes -DBOOST_NO_AUTO_PTR
 CXX_STD = CXX11
 
@@ -10,3 +10,4 @@ Rproj_externals/lp_solve/liblp_solve.a:
 	@(cd Rproj_externals/lp_solve && $(MAKE) liblp_solve.a \
     CC="$(CC)" CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" \
     CPICFLAGS="$(CPICFLAGS)" AR="$(AR)" RANLIB="$(RANLIB)")
+

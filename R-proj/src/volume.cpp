@@ -118,15 +118,17 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
                 Rcpp::Nullable<Rcpp::List> Parameters = R_NilValue) {
 
     typedef double NT;
-    typedef Cartesian<NT>    Kernel;
+    typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
+    typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
+    typedef Cartesian<NT, NT, VT>    Kernel;
     typedef typename Kernel::Point    Point;
     typedef boost::mt19937 RNGType;
     typedef HPolytope <Point> Hpolytope;
     typedef VPolytope <Point, RNGType> Vpolytope;
     typedef Zonotope <Point> zonotope;
     typedef IntersectionOfVpoly<Vpolytope> InterVP;
-    typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
-    typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
+    typedef LMI <MT, VT> lmi;
+    typedef Spectrahedron<lmi, Point> spectaedro;
     unsigned int n = P.field("dimension"), walkL;
 
     bool CG, cdhr = true, rdhr = false, ball_walk = false, round;

@@ -34,7 +34,9 @@
 Rcpp::NumericMatrix poly_gen (int kind_gen, bool Vpoly_gen, int dim_gen, int m_gen) {
 
     typedef double NT;
-    typedef Cartesian <NT> Kernel;
+    typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
+    typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
+    typedef Cartesian<NT, MT, VT>    Kernel;
     typedef typename Kernel::Point Point;
     typedef boost::mt19937 RNGType;
     typedef HPolytope <Point> Hpolytope;

@@ -84,15 +84,15 @@ Rcpp::NumericMatrix sample_points(Rcpp::Nullable<Rcpp::Reference> P = R_NilValue
                                   Rcpp::Nullable<Rcpp::NumericVector> InnerPoint = R_NilValue){
 
     typedef double NT;
-    typedef Cartesian<NT>    Kernel;
+    typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
+    typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
+    typedef Cartesian<NT, MT, VT>    Kernel;
     typedef typename Kernel::Point    Point;
     typedef boost::mt19937 RNGType;
     typedef HPolytope <Point> Hpolytope;
     typedef VPolytope <Point, RNGType> Vpolytope;
     typedef Zonotope <Point> zonotope;
     typedef IntersectionOfVpoly<Vpolytope> InterVP;
-    typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
-    typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
 
     Hpolytope HP;
     Vpolytope VP;
@@ -323,12 +323,11 @@ Rcpp::NumericMatrix sample_points(Rcpp::Nullable<Rcpp::Reference> P = R_NilValue
 
     Rcpp::NumericMatrix PointSet(dim,numpoints);
     typename std::list<Point>::iterator rpit=randPoints.begin();
-    typename std::vector<NT>::iterator qit;
     unsigned int j = 0, i;
     for ( ; rpit!=randPoints.end(); rpit++, j++) {
-        qit = (*rpit).iter_begin(); i=0;
-        for ( ; qit!=(*rpit).iter_end(); qit++, i++){
-            PointSet(i,j)=*qit;
+        i=0;
+        for ( ; i<(*rpit).dimension(); i++){
+            PointSet(i,j)=(*rpit)[i];
         }
     }
     return PointSet;
