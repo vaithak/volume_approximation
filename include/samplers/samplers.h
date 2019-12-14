@@ -203,17 +203,25 @@ void rand_point_generator(Polytope &P,
 
 
 
-template <class Spectrahedron, class PointList, class Parameters, class Point>
+template <class Spectrahedron, class PointList, class Parameters, class SpecSettings, class Point>
 void rand_point_generator_spec(Spectrahedron &spectrahedron,
                           Point &p,   // a point to start
                           unsigned int rnum,
                           unsigned int walk_len,
                           PointList &randPoints,
-                          Parameters &var)  {
+                          Parameters &var,
+                          SpecSettings &settings)  {
+
+
 
     for (unsigned int i = 1; i <= rnum; ++i) {
         for (unsigned int j = 0; j < walk_len; ++j) {
-            hit_and_run_spec(p, spectrahedron, var);
+            if (var.billiard) {
+                billiard_walk(spectrahedron, p, var.diam, var, p, 0.0,
+                                 settings, false)
+            } else {
+                hit_and_run_spec(p, spectrahedron, var);
+            }
         }
         randPoints.push_back(p);
     }
@@ -986,7 +994,8 @@ void billiard_walk(ConvexBody &P, Point &p, NT che_rad, std::vector<NT> &Ar, std
 
 
 template <class Spectrahedron, class Point, class Parameters, class SpecSettings, typename NT>
-double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Parameters &var, const Point& a, const NT& b, SpecSettings& settings, bool shake_and_bake_directions = false) {
+double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, Parameters &var, const Point& a, const NT& b,
+                         SpecSettings& settings, bool shake_and_bake_directions = false) {
 
     typedef typename Parameters::RNGType RNGType;
     unsigned int n = spectrahedron.getLMI().getDim();

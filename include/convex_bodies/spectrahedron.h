@@ -575,6 +575,23 @@ public:
         return lmi.isSingular(x, approx);
     }
 
+    int dimension() {
+        return lmi.getDim();
+    }
+
+    // Cholesky decomposition
+    // It is important to be optimized (oxi axreiastoi upologismoi)
+    template <class SpecSet>
+    int is_in(Point &p, SpecSet &settings) {
+
+        //Check and put your code here [for Panagiotis)
+        Spectra::DenseCholesky<double> Bop(-settings.LMIatP);
+        if (Bop.info() == Spectra::SUCCESSFUL) {
+            return -1;
+        }
+        return 0;
+    }
+
     //template<class Point>
     class BoundaryOracleCDHRSettings {
     public:
