@@ -63,18 +63,18 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, st
     //for (unsigned int i = 0; i < n; i++) {
     //    c_e(i) = c[i];  // write chebychev center in an eigen vector
     //}
-    P.shift(c.getCoefficients());
+    P.shift(c.getCoefficients()); // TODO we need to shift the spectrahedron s.t. the center of balls to be the origin
     //P.normalize();
 
     std::cout << "\nComputing ball annealing..." << std::endl;
     //std::cout<<"N = "<<N<<" nu = "<< nu<<" e = "<<e<<std::endl;
 
-    // CHECK the settings!!!
-    get_sequence_of_polyballs<PolyBall, RNGType>(P, BallSet, ratios, N * nu, nu, lb, ub, radius, alpha, var, P::BoundaryOracleBilliardSettings, rmax);
+    // TODO CHECK the settings!!!
+    get_sequence_of_polyballs<PolyBall, RNGType>(P, BallSet, ratios, N * nu, nu, lb, ub, radius, alpha, var, P::BoundaryOracleBilliardSettings, rmax); // we get the sequence of balls
     var.diameter = diam;
 
     NT vol = (std::pow(M_PI, n / 2.0) * (std::pow((*(BallSet.end() - 1)).radius(), n))) / (tgamma(n / 2.0 + 1));
-    //std::cout<<"rad of C_m = "<<(*(BallSet.end() - 1)).radius()<<", vol of B_m = "<<vol<<std::endl;
+    std::cout<<"rad of C_m = "<<(*(BallSet.end() - 1)).radius()<<", vol of B_m = "<<vol<<std::endl;
 
     int mm = BallSet.size() + 1;
     nballs = NT(mm - 1);
@@ -89,7 +89,7 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, st
     vol *= (window2) ? esti_ratio<RNGType, Point>(*(BallSet.end() - 1), P, *(ratios.end() - 1), er0, win_len, 1200, var,
             true, (*(BallSet.end() - 1)).radius()) :
            esti_ratio_interval<RNGType, Point>(*(BallSet.end() - 1), P, *(ratios.end() - 1), er0, win_len, 1200, prob,
-                                               var, true, (*(BallSet.end() - 1)).radius());
+                                               var, P::BoundaryOracleBilliardSettings, true, (*(BallSet.end() - 1)).radius());
 
     PolyBall Pb;
     typename std::vector<ball>::iterator balliter = BallSet.begin();
@@ -98,13 +98,13 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, st
     er1 = er1 / std::sqrt(NT(mm) - 1.0);
 
     if (*ratioiter != 1) vol *= (!window2) ? 1 / esti_ratio_interval<RNGType, Point>(P, *balliter, *ratioiter, er1,
-            win_len, N * nu, prob, var) : 1 / esti_ratio<RNGType, Point>(P, *balliter, *ratioiter, er1, win_len, N * nu,
+            win_len, N * nu, prob, var, P::BoundaryOracleBilliardSettings) : 1 / esti_ratio<RNGType, Point>(P, *balliter, *ratioiter, er1, win_len, N * nu,
                                                                          var);
     for ( ; balliter < BallSet.end() - 1; ++balliter, ++ratioiter) {
         Pb = PolyBall(P, *balliter);
         Pb.comp_diam(var.diameter);
         vol *= (!window2) ? 1 / esti_ratio_interval<RNGType, Point>(Pb, *(balliter + 1), *(ratioiter + 1), er1,
-                win_len, N * nu, prob, var) : 1 / esti_ratio<RNGType, Point>(Pb, *balliter, *ratioiter, er1,
+                win_len, N * nu, prob, var, P::BoundaryOracleBilliardSettings) : 1 / esti_ratio<RNGType, Point>(Pb, *balliter, *ratioiter, er1,
                                                                              win_len, N * nu, var);
     }
 

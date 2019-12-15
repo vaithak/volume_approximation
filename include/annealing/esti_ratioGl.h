@@ -82,9 +82,9 @@ NT esti_ratio(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W, int Ntot
 }
 
 
-template <class RNGType, class Point, class PolyBall1, class PolyBall2, typename NT, class Parameters>
+template <class RNGType, class Point, class PolyBall1, class PolyBall2, typename NT, class Parameters, class SpecSettings>
 NT esti_ratio_interval(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W, int Ntot, NT prob,
-                       Parameters &var, bool isball = false, NT radius = 0.0) {
+                       Parameters &var, SpecSettings &settings, bool isball = false, NT radius = 0.0) {
 
     int n = var.n, index = 0;
     bool print = var.verbose;
@@ -93,8 +93,12 @@ NT esti_ratio_interval(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W,
     Point p(n);
     Point p_prev=p;
     unsigned int coord_prev;
-    if(!var.ball_walk && !isball) uniform_first_point(Pb1, p, p_prev, coord_prev, 1,
-                                                                             lamdas, Av, lambda, var);
+
+    // TODO We have to set LMI equal to A0 here because for each phase we start the sampling from the origin
+    settings.first = true; // TODO or set the lmi equal to A0
+
+    //if(!var.ball_walk && !isball) uniform_first_point(Pb1, p, p_prev, coord_prev, 1,
+    //                                                                         lamdas, Av, lambda, var);
 
     for (int i = 0; i < W; ++i) {
 
@@ -102,7 +106,7 @@ NT esti_ratio_interval(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W,
             p = get_point_in_Dsphere<RNGType, Point>(n, radius);
             //var.MemLps = var.MemLps + 1.0;
         } else {
-            uniform_next_point_spec(Pb1, p, p_prev, coord_prev, var.walk_steps, lamdas, Av, lambda, var);
+            uniform_next_point_spec(Pb1, p, var.walk_steps, var, settings);
             //var.TotSteps = var.TotSteps + 1.0;
         }
         if (Pb2.is_in(p) == -1) countIn = countIn + 1.0;
@@ -126,7 +130,7 @@ NT esti_ratio_interval(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W,
             p = get_point_in_Dsphere<RNGType, Point>(n, radius);
             //var.MemLps = var.MemLps + 1.0;
         } else {
-            uniform_next_point_spec(Pb1, p, p_prev, coord_prev, var.walk_steps, lamdas, Av, lambda, var);
+            uniform_next_point_spec(Pb1, p, var.walk_steps, var, settings);
             //var.TotSteps = var.TotSteps + 1.0;
         }
         if (Pb2.is_in(p) == -1) countIn = countIn + 1.0;

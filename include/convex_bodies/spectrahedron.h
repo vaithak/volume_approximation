@@ -402,6 +402,16 @@ public:
         return lmi;
     }
 
+    void shift(VT c) {
+        /* shift the spectrahedron according to c */
+        return;
+    }
+
+    void TransformIt(MT T) {
+       /* transform the spectrahedron with linear map T */
+       return;
+    }
+
 
     /**
      * Compute the intersection of a 1D line and the spectrahedron by finding the

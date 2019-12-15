@@ -201,6 +201,22 @@ void rand_point_generator(Polytope &P,
 
 }
 
+template <class Spectrahedron, class Parameters, class SpecSettings, class Point>
+void uniform_next_point_spec(Spectrahedron &spectrahedron,
+                          Point &p,   // a point to start
+                          unsigned int walk_len,
+                          Parameters &var,
+                          SpecSettings &settings) {
+
+    for (unsigned int j = 0; j < walk_len; ++j) {
+        if (var.billiard) {
+            billiard_walk(spectrahedron, p, var.diam, var, p, 0.0,
+                             settings, false)
+        } else {
+            hit_and_run_spec(p, spectrahedron, var);
+        }
+    }
+}
 
 
 template <class Spectrahedron, class PointList, class Parameters, class SpecSettings, class Point>

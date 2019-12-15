@@ -32,7 +32,10 @@ public:
 
         std::pair <NT, NT> ballpair = B.line_intersect(r, v); // maybe a new class for Ball (only VT for inputs)
         Point qq(r + ballpair.first*v);
-        if (P.is_in(qq)==-1) return std::pair<NT, bool> (ballpair.first, false);
+        if (P.is_in(qq)==-1){
+            /* TODO update LMI according to ballpair.first and direction v */
+            return std::pair<NT, bool> (ballpair.first, false);
+        }
 
         return std::pair<NT, bool> (P.boundaryOracleBilliard(p, v, a, b, settings, false).first, false);
 
