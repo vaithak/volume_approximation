@@ -16,8 +16,8 @@
 #include "ball_annealingGl.h"
 #include "esti_ratioGl.h"
 
-template <class Spectrahedron, class Point, class UParameters, class AParameters, typename NT>
-NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, std::pair<Point,NT> &InnerBall, NT &nballs,
+template <class Spectrahedron, class Point, class UParameters, class AParameters, class SpecSettings, typename NT>
+NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, SpecSettings &settings, std::pair<Point,NT> &InnerBall, NT &nballs,
                      bool only_phases = false) {
 
     typedef Ball <Point> ball;
@@ -70,7 +70,7 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, st
     //std::cout<<"N = "<<N<<" nu = "<< nu<<" e = "<<e<<std::endl;
 
     // TODO CHECK the settings!!!
-    get_sequence_of_polyballs<PolyBall, RNGType>(P, BallSet, ratios, N * nu, nu, lb, ub, radius, alpha, var, P::BoundaryOracleBilliardSettings, rmax); // we get the sequence of balls
+    get_sequence_of_polyballs<PolyBall, RNGType>(P, BallSet, ratios, N * nu, nu, lb, ub, radius, alpha, var, settings, rmax); // we get the sequence of balls
     var.diameter = diam;
 
     NT vol = (std::pow(M_PI, n / 2.0) * (std::pow((*(BallSet.end() - 1)).radius(), n))) / (tgamma(n / 2.0 + 1));
@@ -86,10 +86,11 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, st
     NT er0 = e / (2.0 * std::sqrt(NT(mm))), er1 = (e * std::sqrt(4.0 * NT(mm) - 1)) / (2.0 * std::sqrt(NT(mm)));
 
     std::cout<<"Estimating the ratios...\n"<<std::endl;
+    P.set_LMIatP_A0(settings);
     vol *= (window2) ? esti_ratio<RNGType, Point>(*(BallSet.end() - 1), P, *(ratios.end() - 1), er0, win_len, 1200, var,
             true, (*(BallSet.end() - 1)).radius()) :
            esti_ratio_interval<RNGType, Point>(*(BallSet.end() - 1), P, *(ratios.end() - 1), er0, win_len, 1200, prob,
-                                               var, P::BoundaryOracleBilliardSettings, true, (*(BallSet.end() - 1)).radius());
+                                               var, settings, true, (*(BallSet.end() - 1)).radius());
 
     PolyBall Pb;
     typename std::vector<ball>::iterator balliter = BallSet.begin();
@@ -98,13 +99,14 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, st
     er1 = er1 / std::sqrt(NT(mm) - 1.0);
 
     if (*ratioiter != 1) vol *= (!window2) ? 1 / esti_ratio_interval<RNGType, Point>(P, *balliter, *ratioiter, er1,
-            win_len, N * nu, prob, var, P::BoundaryOracleBilliardSettings) : 1 / esti_ratio<RNGType, Point>(P, *balliter, *ratioiter, er1, win_len, N * nu,
+            win_len, N * nu, prob, var, settings) : 1 / esti_ratio<RNGType, Point>(P, *balliter, *ratioiter, er1, win_len, N * nu,
                                                                          var);
     for ( ; balliter < BallSet.end() - 1; ++balliter, ++ratioiter) {
         Pb = PolyBall(P, *balliter);
         Pb.comp_diam(var.diameter);
+        Pb.set_LMIatP_A0(settings);
         vol *= (!window2) ? 1 / esti_ratio_interval<RNGType, Point>(Pb, *(balliter + 1), *(ratioiter + 1), er1,
-                win_len, N * nu, prob, var, P::BoundaryOracleBilliardSettings) : 1 / esti_ratio<RNGType, Point>(Pb, *balliter, *ratioiter, er1,
+                win_len, N * nu, prob, var, settings) : 1 / esti_ratio<RNGType, Point>(Pb, *balliter, *ratioiter, er1,
                                                                              win_len, N * nu, var);
     }
 

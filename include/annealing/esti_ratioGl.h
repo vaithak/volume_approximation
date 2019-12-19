@@ -95,7 +95,6 @@ NT esti_ratio_interval(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W,
     unsigned int coord_prev;
 
     // TODO We have to set LMI equal to A0 here because for each phase we start the sampling from the origin
-    settings.first = true; // TODO or set the lmi equal to A0
 
     //if(!var.ball_walk && !isball) uniform_first_point(Pb1, p, p_prev, coord_prev, 1,
     //                                                                         lamdas, Av, lambda, var);

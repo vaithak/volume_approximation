@@ -1070,6 +1070,35 @@ public:
 
 
     }
+
+    template <typename NT>
+    void ComputeInnerBall(NT &diam, NT &radius) {
+
+        BoundaryOracleCDHRSettings CDHRsettings(getLMI().getMatricesDim());
+        CDHRsettings.LMIatP = getLMI().getA0();
+
+        VT center(getLMI().getMatricesDim()), v(getLMI().getMatricesDim());
+        NT bb=0.0;
+
+        for (unsigned int i = 0; i < getLMI().getMatricesDim(); ++i) {
+            v = VT::Zero(getLMI().getMatricesDim());
+            v[i] = 1.0;
+            std::pair<NT, NT> min_max = boundaryOracleCDHR(center, i, center, bb, CDHRsettings);
+            if (min_max.first < radius) radius = min_max.first;
+            if (-min_max.second < radius) radius = -min_max.second;
+            if (min_max.first-min_max.second > diam ) diam = min_max.first-min_max.second;
+        }
+
+        radius = radius / std::sqrt(NT(_d));
+
+    }
+
+    template <class SpecSettings>
+    void set_LMIatP_A0(SpecSettings& specSettings) {
+        specSettings.LMIatP = getLMI().getA0();
+    }
+
+
 };
 
 #endif //VOLESTI_SPECTRAHEDRON_H

@@ -81,5 +81,14 @@ public:
                                  std::max(polypair.second, ballpair.second));
     }
 
+    template <class SpecSettings>
+    void set_LMIatP_A0(SpecSettings& specSettings) {
+        specSettings.LMIatP = P.getLMI().getA0();
+    }
+
+    void comp_diam(NT &diam) {
+        diam = 2.0*B.radius();
+    }
+
 };
 

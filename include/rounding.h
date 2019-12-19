@@ -101,4 +101,77 @@ std::pair <NT, NT> rounding_min_ellipsoid(Polytope &P , std::pair<Point,NT> Inne
     return std::pair<NT, NT> (L_1.determinant(),rel/Rel);
 }
 
+template <class Spectrahedron, class Point, class Parameters, class SpecSettings typename NT>
+void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, SpecSettings settings,
+                                   NT &rand_value, NT &diam, NT &radius, bool rounding) {
+
+    //typedef typename Polytope::NT 	NT;
+    typedef typename Spectrahedron::MT MT;
+    typedef typename Spectrahedron::VT VT;
+    //typedef typename Polytope::PolytopePoint 	Point;
+
+    unsigned int n = var.n, walk_len = 1, i, j;
+    std::list <Point> randPoints;
+    rand_value = 1.0;
+    //var.cdhr_walk = false;
+    MT E(n, n);
+    VT e(n);
+    boost::numeric::ublas::matrix<double> Ap(n, 10 * n);
+    NT max_diam = 0.0, diam_iter, ratio1 = 0.0;
+
+    int count = 1;
+
+    while(true) {
+
+        randPoints.clear();
+        rand_point_generator_spec(SP, p, 10 * n, 2, randPoints, var, settings);
+        //boundary_rand_point_generator(P, p, 50*n, walk_len, randPoints, var);
+
+        typename std::list<Point>::iterator rpit = randPoints.begin();
+        typename std::vector<NT>::iterator qit;
+        j = 0, i = 0;
+        for (; rpit != randPoints.end(); rpit++, j++) {
+            qit = (*rpit).iter_begin();
+            i = 0;
+            for (; qit != (*rpit).iter_end(); qit++, i++) {
+                Ap(i, j) = double(*qit);
+            }
+        }
+        boost::numeric::ublas::matrix<double> Q(n, n);
+        boost::numeric::ublas::vector<double> c2(n);
+        size_t w = 1000;
+        KhachiyanAlgo(Ap, 0.01, w, Q, c2); // call Khachiyan algorithm
+
+
+
+        //Get ellipsoid matrix and center as Eigen objects
+        for (unsigned int i = 0; i < n; i++) {
+            e(i) = NT(c2(i));
+            for (unsigned int j = 0; j < n; j++) {
+                E(i, j) = NT(Q(i, j));
+            }
+        }
+
+
+        if (rounding) {
+            Eigen::LLT <MT> lltOfA(E); // compute the Cholesky decomposition of E
+            MT L = lltOfA.matrixL(); // retrieve factor L  in the decomposition
+            MT L_1 = L.inverse();
+
+            rand_value *= L_1.determinant();
+            P.linear_transformIt(L_1.transpose());
+            p = Point(n);
+            P.set_LMIatP_A0(settings);
+            rounding = false;
+        } else {
+            break;
+        }
+
+    }
+    P.shift(e);
+
+    SP.ComputeInnerBall(diam, radius);
+
+}
+
 #endif

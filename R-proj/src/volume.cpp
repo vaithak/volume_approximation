@@ -10,6 +10,7 @@
 #include <Rcpp.h>
 #include <RcppEigen.h>
 #include "volume.h"
+#include "sdp_generator.h"
 
 
 template <class Point, class NT, class Polytope>
@@ -115,7 +116,9 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
                 Rcpp::Nullable<Rcpp::NumericVector> InnerBall = R_NilValue,
                 Rcpp::Nullable<std::string> Algo = R_NilValue,
                 Rcpp::Nullable<std::string> WalkType = R_NilValue, Rcpp::Nullable<bool> rounding = R_NilValue,
-                Rcpp::Nullable<Rcpp::List> Parameters = R_NilValue) {
+                Rcpp::Nullable<Rcpp::List> Parameters = R_NilValue,
+               Rcpp::Nullable<int> nn = R_NilValue,
+               Rcpp::Nullable<int> mm = R_NilValue) {
 
     typedef double NT;
     typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
@@ -218,6 +221,32 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
     }
 
     int type = P.field("type");
+
+    if(nn.isNotNull() && mm.isNotNull()) {
+        spectaedro SP;
+        SP = generateSDP(Rcpp::as<int>(nn), Rcpp::as<int>(mm));
+
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        // the random engine with this seed
+        typedef boost::mt19937    RNGType;
+        RNGType rng(seed);
+        boost::random::uniform_real_distribution<>(urdist);
+        boost::random::uniform_real_distribution<> urdist1(-1,1);
+
+        vars_ban <NT> var_ban(0.1, 0.15, 0.75, 0.0, 0.2, 150, 125, 10, false);
+        std::pair<Point,NT> InnerB;
+        NT nballs, diam_spec, vol_spec;
+        InnerB = SP.ComputeInnerBall(diam_spec);
+
+        vars<NT, RNGType> var(0,Rcpp::as<int>(nn), 1, 1,0.0,0.1,0,0.0,0, InnerB.second,diam_spec,rng,urdist,urdist1,
+                              delta,true,false,round,false,false,ball_walk,cdhr,rdhr);
+        SP::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+        settings.LMIatP = SP.getLMI().getA0();
+
+        vol_spec = volesti_ball_ann(SP, var, var_ban, settings, InnerB, nballs, false);
+        return vol_spec;
+    }
+
     switch(type) {
         case 1: {
             // Hpolytope
