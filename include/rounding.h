@@ -119,6 +119,9 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
     boost::numeric::ublas::matrix<double> Ap(n, 10 * n);
     NT max_diam = 0.0, diam_iter, ratio1 = 0.0;
 
+    SP.ComputeInnerBall(diam, radius);
+    var.diam = diam;
+
     int count = 1;
 
     while(true) {
@@ -169,6 +172,7 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
 
     }
     P.shift(e);
+    settings.LMIatP = SP.getLMI().getA0();
 
     SP.ComputeInnerBall(diam, radius);
 

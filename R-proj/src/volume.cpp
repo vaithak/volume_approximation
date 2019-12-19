@@ -235,16 +235,19 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
 
         vars_ban <NT> var_ban(0.1, 0.15, 0.75, 0.0, 0.2, 150, 125, 10, false);
         std::pair<Point,NT> InnerB;
-        NT nballs, diam_spec, vol_spec;
-        InnerB = SP.ComputeInnerBall(diam_spec);
+        Point p(Rcpp::as<int>(nn));
+        NT nballs2, diam_spec, vol_spec, rad, round_value = 1.0;
+        InnerB.first = p;// = SP.ComputeInnerBall(diam_spec);
 
         vars<NT, RNGType> var(0,Rcpp::as<int>(nn), 1, 1,0.0,0.1,0,0.0,0, InnerB.second,diam_spec,rng,urdist,urdist1,
-                              delta,true,false,round,false,false,ball_walk,cdhr,rdhr);
+                              delta,true,false,round,false,false,false,false,false, true);
         SP::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
         settings.LMIatP = SP.getLMI().getA0();
 
-        vol_spec = volesti_ball_ann(SP, var, var_ban, settings, InnerB, nballs, false);
-        return vol_spec;
+        preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
+
+        vol_spec = volesti_ball_ann(SP, var, var_ban, settings, InnerB, nballs2, false);
+        return vol_spec * round_value;
     }
 
     switch(type) {

@@ -337,6 +337,10 @@ public:
         return matrices[i];
     }
 
+    const std::vector<MT> getMatrices(){
+        return matrices;
+    }
+
     const MT &getA0() const {
         return A0;
     }
@@ -402,16 +406,9 @@ public:
         return lmi;
     }
 
-    void shift(VT c) {
-        /* shift the spectrahedron according to c */
-        return;
+    int dimension() {
+        return getLMI().getDim();
     }
-
-    void TransformIt(MT T) {
-       /* transform the spectrahedron with linear map T */
-       return;
-    }
-
 
     /**
      * Compute the intersection of a 1D line and the spectrahedron by finding the
@@ -1076,13 +1073,15 @@ public:
 
         BoundaryOracleCDHRSettings CDHRsettings(getLMI().getMatricesDim());
         CDHRsettings.LMIatP = getLMI().getA0();
+        diam = 0.0;
+        radius = maxDouble;
 
-        VT center(getLMI().getMatricesDim()), v(getLMI().getMatricesDim());
+        VT center(getLMI().getDim()), v(getLMI().getDim());
         NT bb=0.0;
 
         for (unsigned int i = 0; i < getLMI().getMatricesDim(); ++i) {
             v = VT::Zero(getLMI().getMatricesDim());
-            v[i] = 1.0;
+            v.set_coord(i, 1.0);
             std::pair<NT, NT> min_max = boundaryOracleCDHR(center, i, center, bb, CDHRsettings);
             if (min_max.first < radius) radius = min_max.first;
             if (-min_max.second < radius) radius = -min_max.second;
@@ -1090,6 +1089,7 @@ public:
         }
 
         radius = radius / std::sqrt(NT(_d));
+        diam = 1.5 * diam;
 
     }
 
@@ -1098,6 +1098,19 @@ public:
         specSettings.LMIatP = getLMI().getA0();
     }
 
+    void shift(VT e) {
+        MT A0 = getLMI().getA0();
+        std::vector<MT> matrices = getLMI().getMatrices();
+
+        int d = matrices.size();
+
+        for (int i = 0; i < d; ++i) {
+            A0 = A0 + e(i)*matrices[i];
+        }
+
+    }
+
+    void linear_transformIt(MT T){}
 
 };
 
