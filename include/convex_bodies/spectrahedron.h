@@ -66,6 +66,10 @@ public:
         setGradientMatrix();
     }
 
+    void set_Ai(const MT &Ai, const int i) {
+        matrices[i] = Ai;
+    }
+
     /**
      * Evaluate the lmi for vector x
      *
@@ -589,6 +593,10 @@ public:
 
     bool isSingular(VT &x, double approx) {
         return lmi.isSingular(x, approx);
+    }
+
+    void set_Ai(const MT &Ai, const int i) {
+        lmi.set_Ai(Ai, i);
     }
 
     //int dimension() {
@@ -1127,7 +1135,13 @@ public:
 
     }
 
-    void linear_transformIt(MT T){}
+    void linear_transformIt(MT T){
+
+        for (int i = 0; i < dimension(); ++i) {
+            set_Ai(T.col(i).sum() * getLMI().getAi(i), i);
+        }
+
+    }
 
 };
 

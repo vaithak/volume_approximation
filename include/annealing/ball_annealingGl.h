@@ -67,15 +67,28 @@ void get_next_zonoball(std::vector<ball> &BallSet,
     bool too_few;
     NT radmax = 0.0, rad, pnorm, ratio;
 
+    std::cout<<"size randPoints = "<<randPoints.size()<<std::endl;
     for (typename PointList::iterator rpit = randPoints.begin();  rpit!=randPoints.end(); ++rpit) {
         pnorm = (*rpit).squared_length();
         if (pnorm > radmax) radmax = pnorm;
     }
     ball Biter;
     radmax=std::sqrt(radmax);
+    std::cout<<"radmax = "<<radmax<<", n = "<<n<<std::endl;
+    ball BB(Point(n), radmax * radmax);
+    int counter = 0;
+    for (typename PointList::iterator rpit = randPoints.begin();  rpit!=randPoints.end(); ++rpit) {
+        if (BB.is_in(*rpit) == -1) counter++;
+    }
+    std::cout<<"counter = "<<counter<<std::endl;
+
+    NT rmax = radmax, rmin = rad_min;
 
     while (true) {
         rad = 0.5 * (rad_min + radmax);
+        std::cout<<"rmax = "<<radmax<<", rad_med = "<<rad<<", rmin = "<<rad_min<<std::endl;
+        //throw "opa";
+
         Biter = ball(Point(n), rad * rad);
         too_few = false;
 
@@ -84,12 +97,22 @@ void get_next_zonoball(std::vector<ball> &BallSet,
             ratios.push_back(ratio);
             return;
         }
+        std::cout<<"ratio = "<<ratio<<", too_few = "<<too_few<<std::endl;
 
         if (too_few) {
             rad_min = rad;
         } else {
             radmax = rad;
         }
+
+        if(radmax-rad_min<0.000000001) {
+            throw "opa";
+            std::cout << "fail to find first ball in 30 iterations...repeat proccess" << std::endl;
+            //std::cout<<"origin is in = "<<P.is_in(Point(n))<<std::endl;
+            radmax = rmax;
+            rad_min = rmin;
+        }
+
     }
 
 }
@@ -216,8 +239,11 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
             ratios.push_back(ratio);
             BallSet.push_back(B0);
             ratios.push_back(ratio0);
+            if(print) std::cout<<"number of balls = "<<BallSet.size()+1<<std::endl;
             return;
         }
+        if(print) std::cout<<"ratio = "<<ratio<<std::endl;
+        if(print) std::cout<<"computing new ball.."<<std::endl;
         get_next_zonoball<Point>(BallSet, randPoints, B0.radius(), ratios, lb, ub, alpha, nu);
         if(print) std::cout<<"number of balls = "<<BallSet.size()+1<<std::endl;
     }

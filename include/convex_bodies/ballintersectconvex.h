@@ -53,12 +53,22 @@ public:
     }
 
 
+    template <class VT>
+    NT line_pos_intersect(const VT &p, const VT &v ) {
+
+        NT vrc = v.dot(p), v2 = std::pow(v.norm(), 2.0), p2 = std::pow(p.norm(), 2.0);
+        NT disc_sqrt = std::sqrt(std::pow(vrc,2) - v2 * (p2 - R));
+        return (NT(-1)*vrc + disc_sqrt)/v2;
+
+    }
+
+
     std::pair<NT,NT> line_intersect(Point r,
                                           Point v){
 
         Coeff r_coeffs = r.getCoefficients();
         Coeff v_coeffs = v.getCoefficients();
-        Coeff c_coeffs = c.getCoefficients();
+        //Coeff c_coeffs = c.getCoefficients();
 
         //Point rc = r;// - _c;
 //        viterator rcit=r.iter_begin();
@@ -67,7 +77,7 @@ public:
         NT v2(0);
         NT rc2(0);
         for(int i=0 ; i < c.dimension() ; ++i){
-            vrc += v_coeffs(i) * c_coeffs(i);
+            vrc += v_coeffs(i) * r_coeffs(i);
             v2 += v_coeffs(i) * v_coeffs(i);
             rc2 += r_coeffs(i) * r_coeffs(i);
         }
@@ -77,6 +87,8 @@ public:
         NT lamda2((NT(-1)*vrc - disc_sqrt)/v2);
         return std::pair<NT,NT> (lamda1,lamda2);
     }
+
+
 
     std::pair<NT,NT> line_intersect_coord(Point r,
                                           int rand_coord){

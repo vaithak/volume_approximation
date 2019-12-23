@@ -251,7 +251,7 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
 
     if(nn.isNotNull() && mm.isNotNull()) {
         spectaedro SP;
-        SP = generateSDP<lmi, spectaedro, Point>(Rcpp::as<int>(nn), Rcpp::as<int>(mm));
+        SP = generateSDP2<lmi, spectaedro, Point>(Rcpp::as<int>(nn), Rcpp::as<int>(mm));
 
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         // the random engine with this seed

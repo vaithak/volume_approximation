@@ -34,12 +34,15 @@ public:
     std::pair<NT,bool> boundaryOracleBilliard(const VT &p, const VT &v, const VT &a, const NT &b, SpecSettings& settings, bool always_false) {
 
         Point pp(p), vv(v);
-        std::pair <NT, NT> ballpair = B.line_intersect(pp, vv); // maybe a new class for Ball (only VT for inputs)
-        Point qq(p + ballpair.first*v);
+        //std::cout<<"d = "<<pp.dimension()<<std::endl;
+        NT ballpair = B.line_pos_intersect(p, v ); // maybe a new class for Ball (only VT for inputs)
+        Point qq(p + ballpair*v);
         if (P.is_in(qq)==-1){
             onball = true;
+            //std::cout<<"ballpair.first = "<<ballpair<<std::endl;
+            //qq.print();
             /* TODO update LMI according to ballpair.first and direction v */
-            return std::pair<NT, bool> (ballpair.first, false);
+            return std::pair<NT, bool> (ballpair, false);
         }
         onball = false;
         return std::pair<NT, bool> (P.boundaryOracleBilliard(p, v, a, b, settings, false).first, false);

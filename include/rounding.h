@@ -103,7 +103,7 @@ std::pair <NT, NT> rounding_min_ellipsoid(Polytope &P , std::pair<Point,NT> Inne
 
 template <class Spectrahedron, class Point, class Parameters, class SpecSettings, typename NT>
 void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, SpecSettings settings,
-                                   NT &rand_value, NT &diam, NT &radius, bool rounding) {
+                                   NT &rand_value, NT &diam, NT &radius, bool &rounding) {
 
     //typedef typename Polytope::NT 	NT;
     typedef typename Spectrahedron::MT MT;
@@ -130,7 +130,7 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
 
         randPoints.clear();
         std::cout<<"Sampling 10d points from P.."<<std::endl;
-        rand_point_generator_spec(SP, p, 10 * n, 2, randPoints, var, settings);
+        rand_point_generator_spec(SP, p, 10 * n, 5, randPoints, var, settings);
         std::cout<<"points sampled.."<<std::endl;
         //boundary_rand_point_generator(P, p, 50*n, walk_len, randPoints, var);
 
@@ -168,6 +168,9 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
 
             rand_value *= L_1.determinant();
             SP.linear_transformIt(L_1.transpose());
+            SP.ComputeInnerBall(diam, radius);
+            var.che_rad = radius;
+            var.diameter = diam;
             p = Point(n);
             SP.set_LMIatP_A0(settings);
             rounding = false;
