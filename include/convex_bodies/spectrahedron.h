@@ -600,8 +600,8 @@ public:
     //template <class MT>
     int is_in(Point &p) {
 
-        lmi.evaluateWithoutA0_revised(p.getCoefficients(), LMIatP);
-        LMIatP += getLMI().getA0();
+        lmi.evaluate_revised(p.getCoefficients(), LMIatP);
+        //LMIatP += getLMI().getA0();
         //Check and put your code here [for Panagiotis)
         Spectra::DenseCholesky<double> Bop(-LMIatP);
         if (Bop.info() == Spectra::SUCCESSFUL) {
@@ -664,6 +664,7 @@ public:
         // Initialize and compute
         geigs.init();
         int nconv = geigs.compute();
+        std::cout<<"computation done"<<std::endl;
 
 
         // Retrieve results
@@ -691,6 +692,7 @@ public:
             throw("Unbounded");
 
         if (settings.hasCuttingPlane) {
+            std::cout<<"check cutting plane"<<std::endl;
             // check the cutting plane
             double lambda = (b - a.dot(position)) / a[coordinate];
 
@@ -1020,7 +1022,7 @@ public:
         settings.gradient = -1 * settings.gradient;
     }
 
-    void compute_reflection(const VT &genEivector, VT &direction, MT &C) {
+    /*void compute_reflection(const VT &genEivector, VT &direction, MT &C) {
         VT gradient;
         std::vector<MT> matrices = lmi.getMatrices();
         int dim = matrices.size();
@@ -1050,7 +1052,7 @@ public:
 
         gradient = ((-2.0 * direction.dot(gradient)) * gradient);
         direction += gradient;
-    }
+    }*/
 
     //template<class Point>
     void compute_reflection(const Point &genEivector, Point &direction, const Point &p) {
@@ -1090,10 +1092,12 @@ public:
         VT center(dimension());// v(dimension());
         NT bb=0.0;
 
-        for (unsigned int i = 0; i < getLMI().getMatricesDim(); ++i) {
+        for (unsigned int i = 0; i < dimension(); ++i) {
+            std::cout<<"i = "<<i<<std::endl;
             //v = VT::Zero(getLMI().getMatricesDim());
             //v(i) = 1.0;
             std::pair<NT, NT> min_max = boundaryOracleCDHR(center, i, center, bb, CDHRsettings);
+            std::cout<<"min_max.first = "<<min_max.first<<", min_max.second = "<<min_max.second<<std::endl;
             if (min_max.first < radius) radius = min_max.first;
             if (-min_max.second < radius) radius = -min_max.second;
             if (min_max.first-min_max.second > diam ) diam = min_max.first-min_max.second;
@@ -1101,6 +1105,8 @@ public:
 
         radius = radius / std::sqrt(NT(dimension()));
         diam = 1.5 * diam;
+
+        std::cout<<"diam = "<<diam<<", radius = "<<radius<<std::endl;
 
     }
 

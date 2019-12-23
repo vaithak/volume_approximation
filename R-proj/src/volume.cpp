@@ -271,7 +271,10 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
         spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
         settings.LMIatP = SP.getLMI().getA0();
 
+        std::cout<<"\ninitializations ok.."<<std::endl;
         preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
+        std::cout<<"preproccessing ok.."<<std::endl;
+        InnerB.second = rad;
 
         vol_spec = volesti_ball_ann(SP, var, var_ban, settings, InnerB, nballs2, false);
         return vol_spec * round_value;
