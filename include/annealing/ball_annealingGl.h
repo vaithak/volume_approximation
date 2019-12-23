@@ -108,7 +108,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
         for (int i = 0; i < 1200; ++i) {
             randPoints.push_back(get_point_in_Dsphere<RNGType, Point>(n, rmax));
         }
-        var.MemLps = var.MemLps + 1200.0;
+        //var.MemLps = var.MemLps + 1200.0;
         pass = check_converg001<Point>(P, randPoints, lb, ub, too_few, ratio, 10, alpha, true, false);
         if (pass || !too_few) {
             B0 = ball(Point(n), rmax*rmax);
@@ -127,7 +127,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
         too_few = false;
 
         for (int i = 0; i < 1200; ++i) randPoints.push_back(get_point_in_Dsphere<RNGType, Point>(n, rmax));
-        var.MemLps = var.MemLps + 1200.0;
+        //var.MemLps = var.MemLps + 1200.0;
 
         if(check_converg001<Point>(P, randPoints, lb, ub, too_few, ratio, 10, alpha, true, false)) {
             B0 = ball(Point(n), rmax*rmax);
@@ -147,7 +147,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
         too_few = false;
 
         for (int i = 0; i < 1200; ++i) randPoints.push_back(get_point_in_Dsphere<RNGType, Point>(n, rad_med));
-        var.MemLps = var.MemLps + 1200.0;
+        //var.MemLps = var.MemLps + 1200.0;
 
         if(check_converg001<Point>(P, randPoints, lb, ub, too_few, ratio, 10, alpha, true, false)) {
             B0 = ball(Point(n), rad_med*rad_med);
@@ -176,7 +176,7 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
                                NT lb, NT ub, NT radius, NT alpha, Parameters &var, SpecSettings &settings, NT rmax = 0.0) {
 
     typedef typename Polytope::PolytopePoint Point;
-    typedef typename Polytope::MT MT;
+    //typedef typename Polytope::MT MT;
     bool print = var.verbose, fail;
     int n = P.dimension();
     NT ratio, ratio0;
@@ -188,7 +188,7 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
     std::cout<<"C' computed..."<<std::endl;
     ratio0 = ratio;
     rand_point_generator_spec(P, q, Ntot, var.walk_steps, randPoints, var, settings);
-    var.TotSteps = var.TotSteps + NT(Ntot);
+    //var.TotSteps = var.TotSteps + NT(Ntot);
     //std::cout<<Ntot<<" points sampled from P"<<std::endl;
 
     if (check_converg001<Point>(B0, randPoints, lb, ub, fail, ratio, nu, alpha, false, true)) {
@@ -209,7 +209,7 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
         randPoints.clear();
         zb_it.comp_diam(var.diameter);
         rand_point_generator_spec(zb_it, q, Ntot, var.walk_steps, randPoints,var, settings);
-        var.TotSteps = var.TotSteps + NT(Ntot);
+        //var.TotSteps = var.TotSteps + NT(Ntot);
         //std::cout<<"N points sampled from BP"<<std::endl;
 
         if (check_converg001<Point>(B0, randPoints, lb, ub, fail, ratio, nu, alpha, false, true)) {

@@ -1,16 +1,17 @@
 #ifndef BALL_ANN_VOL_H
 #define BALL_ANN_VOL_H
 
-#include "cartesian_geom/cartesian_kernel.h"
-#include "vars.h"
+//#include "cartesian_geom/cartesian_kernel.h"
+//#include "vars.h"
 //#include "hpolytope.h"
 //#include "vpolytope.h"
 //#include "zpolytope.h"
 #include "spectrahedron.h"
-#include "ballintersectconvex.h"
-#include "vpolyintersectvpoly.h"
-#include "samplers.h"
-#include "rounding.h"
+#include "ballintersectspec.h"
+//#include "ballintersectconvex.h"
+//#include "vpolyintersectvpoly.h"
+//#include "samplers.h"
+//#include "rounding.h"
 #include "boost/math/distributions/students_t.hpp"
 #include "boost/math/special_functions/erf.hpp"
 #include "ball_annealingGl.h"
@@ -24,6 +25,7 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, Sp
     typedef BallIntersectSpectra <Spectrahedron, ball> PolyBall;
     typedef typename UParameters::RNGType RNGType;
     typedef typename Spectrahedron::VT VT;
+    typedef typename Spectrahedron::MT MT;
     typedef std::list <Point> PointList;
 
     int n = var.n, win_len = var_ban.win_len, N = var_ban.N, nu = var_ban.nu;
@@ -69,6 +71,7 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, Sp
     std::cout << "\nComputing ball annealing..." << std::endl;
     //std::cout<<"N = "<<N<<" nu = "<< nu<<" e = "<<e<<std::endl;
 
+    //MT LMIatP(P.getLMI().getMatricesDim(), P.getLMI().getMatricesDim());
     // TODO CHECK the settings!!!
     get_sequence_of_polyballs<PolyBall, RNGType>(P, BallSet, ratios, N * nu, nu, lb, ub, radius, alpha, var, settings, rmax); // we get the sequence of balls
     var.diameter = diam;

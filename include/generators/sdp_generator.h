@@ -16,6 +16,7 @@
 typedef boost::mt19937 RNGType;
 
 
+template <class MT>
 void randomMatrixGOE(MT& M) {
     unsigned m = M.rows();
     boost::normal_distribution<> rdist(0,1);
@@ -30,61 +31,38 @@ void randomMatrixGOE(MT& M) {
 }
 // m must be even
 
-template <class Spectrahedron, class Point>
+template <class LMI, class Spectrahedron, class Point>
 Spectrahedron generateSDP(int n, int m) {
 
     typedef typename Spectrahedron::VT VT;
     typedef typename Spectrahedron::MT MT;
     typedef typename Point::FT NT;
 
-    VT obj(n);
-    srand (time(NULL));
-    
-    if (m % 2 != 0) throw 1;
-
-    for (int i = 0; i < n; i++) {
-        obj(i) = -5 + ((NT)rand() / RAND_MAX)*30;
-    }
-
-    MT ones(m, m);
-    for (int i=0 ; i<ones.rows() ; i++)
-        for (int j=0 ; j<ones.cols() ; j++)
-            ones(i, j) = 1;
-
+    MT ones = MT::Ones(m, m);
     MT M = 2* Eigen::MatrixXd::Random(m,m) - ones;
-//    M.resize(m,m);
-//    randomMatrixGOE(M);
-
-
 
     MT I = Eigen::MatrixXd::Identity(m, m);
     std::vector<MT> matrices(n + 1);
     matrices[0] = -(M * M.transpose()) - I;
 
-//    matrices[0] = I;//(M + M.transpose())/2;
 
-    ones.resize(m/2, m/2);
-    for (int i=0 ; i<ones.rows() ; i++)
-        for (int j=0 ; j<ones.cols() ; j++)
-            ones(i, j) = 1;
-
+    MT ones2 = MT::Ones(m/2, m/2);
+    MT MM(m/2, m/2);
 
     for (int i=1 ; i<=n ; i++) {
-        M =  2* Eigen::MatrixXd::Random(m/2,m/2) - ones;
-        MT MM = M.selfadjointView<Eigen::Upper>();
-
-//        for (int at = 0 ; at<m/2 ; at++)
-//            MM(at,at) -= M(at,at);
-
+        MM =  2 * MT::Random(m/2, m/2) - ones2;
+        MM = MM + MM.transpose();
         MT A;
         A.setZero(m, m);
-        A.topLeftCorner(m/2, m/2) = MM;
-        A.bottomRightCorner(m/2, m/2) = -MM;
-        matrices[i] = A;
 
-//        M.resize(m,m);
-//        randomMatrixGOE(M);
-//        matrices[i] = (M + M.transpose())/2- ones;
+        for (int j = 0; j < m/2; ++j) {
+            for (int k = 0; k < m/2; ++k) {
+                A(j,k) = MM(j,k);
+                A(j+m/2, k+m/2) = -MM(j+m/2, k+m/2);
+            }
+        }
+        std::cout<<"A = "<<A<<"\n"<<std::endl;
+        matrices[i] = A;
     }
 
     LMI lmi(matrices);

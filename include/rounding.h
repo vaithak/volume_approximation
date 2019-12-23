@@ -101,7 +101,7 @@ std::pair <NT, NT> rounding_min_ellipsoid(Polytope &P , std::pair<Point,NT> Inne
     return std::pair<NT, NT> (L_1.determinant(),rel/Rel);
 }
 
-template <class Spectrahedron, class Point, class Parameters, class SpecSettings typename NT>
+template <class Spectrahedron, class Point, class Parameters, class SpecSettings, typename NT>
 void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, SpecSettings settings,
                                    NT &rand_value, NT &diam, NT &radius, bool rounding) {
 
@@ -120,7 +120,7 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
     NT max_diam = 0.0, diam_iter, ratio1 = 0.0;
 
     SP.ComputeInnerBall(diam, radius);
-    var.diam = diam;
+    var.diameter = diam;
 
     int count = 1;
 
@@ -131,13 +131,14 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
         //boundary_rand_point_generator(P, p, 50*n, walk_len, randPoints, var);
 
         typename std::list<Point>::iterator rpit = randPoints.begin();
-        typename std::vector<NT>::iterator qit;
+        //typename std::vector<NT>::iterator qit;
+        VT qq(n);
         j = 0, i = 0;
         for (; rpit != randPoints.end(); rpit++, j++) {
-            qit = (*rpit).iter_begin();
-            i = 0;
-            for (; qit != (*rpit).iter_end(); qit++, i++) {
-                Ap(i, j) = double(*qit);
+            qq = (*rpit).get_coefficients();
+            //i = 0;
+            for (i=0; i<n; i++) {
+                Ap(i, j) = double(qq(i));
             }
         }
         boost::numeric::ublas::matrix<double> Q(n, n);
@@ -162,16 +163,16 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
             MT L_1 = L.inverse();
 
             rand_value *= L_1.determinant();
-            P.linear_transformIt(L_1.transpose());
+            SP.linear_transformIt(L_1.transpose());
             p = Point(n);
-            P.set_LMIatP_A0(settings);
+            SP.set_LMIatP_A0(settings);
             rounding = false;
         } else {
             break;
         }
 
     }
-    P.shift(e);
+    SP.shift(e);
     settings.LMIatP = SP.getLMI().getA0();
 
     SP.ComputeInnerBall(diam, radius);

@@ -69,6 +69,10 @@ public:
         this->coeffs.noalias() = vector;
     }
 
+    Coeff get_coefficients() {
+        return coeffs;
+    }
+
     FT operator[] (const unsigned int& i) const {
         return coeffs(i);
     }

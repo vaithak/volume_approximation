@@ -210,10 +210,10 @@ void uniform_next_point_spec(Spectrahedron &spectrahedron,
 
     for (unsigned int j = 0; j < walk_len; ++j) {
         if (var.billiard) {
-            billiard_walk(spectrahedron, p, var.diam, var, p, 0.0,
-                             settings, false)
+            billiard_walk(spectrahedron, p, var.diameter, var, p, 0.0,
+                             settings, false);
         } else {
-            hit_and_run_spec(p, spectrahedron, var);
+            //hit_and_run_spec(p, spectrahedron, var);
         }
     }
 }
@@ -233,10 +233,10 @@ void rand_point_generator_spec(Spectrahedron &spectrahedron,
     for (unsigned int i = 1; i <= rnum; ++i) {
         for (unsigned int j = 0; j < walk_len; ++j) {
             if (var.billiard) {
-                billiard_walk(spectrahedron, p, var.diam, var, p, 0.0,
-                                 settings, false)
+                billiard_walk(spectrahedron, p, var.diameter, var, p, 0.0,
+                                 settings, false);
             } else {
-                hit_and_run_spec(p, spectrahedron, var);
+                //hit_and_run_spec(p, spectrahedron, var);
             }
         }
         randPoints.push_back(p);
@@ -1014,7 +1014,7 @@ double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, 
                          SpecSettings& settings, bool shake_and_bake_directions = false) {
 
     typedef typename Parameters::RNGType RNGType;
-    unsigned int n = spectrahedron.getLMI().getDim();
+    unsigned int n = spectrahedron.dimension();
     RNGType &rng = var.rng;
     boost::random::uniform_real_distribution<> urdist(0, 1);
     NT T = urdist(rng) * che_rad;
@@ -1064,7 +1064,7 @@ double billiard_walk(Spectrahedron &spectrahedron, Point &p, const NT& che_rad, 
             settings.computeB = false;
         }
         else
-            spectrahedron.compute_reflection(settings.genEigenvector, v);
+            spectrahedron.compute_reflection(settings.genEigenvector, v, p);
 
     }
 

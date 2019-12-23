@@ -9,7 +9,34 @@
 
 #include <Rcpp.h>
 #include <RcppEigen.h>
-#include "volume.h"
+#include <iterator>
+//#include <fstream>
+#include <vector>
+#include <list>
+//#include <algorithm>
+#include <math.h>
+#include <chrono>
+#include "cartesian_geom/cartesian_kernel.h"
+#include "random.hpp"
+#include "random/uniform_int.hpp"
+#include "random/normal_distribution.hpp"
+#include "random/uniform_real_distribution.hpp"
+#include "vars.h"
+#include "polytopes.h"
+//#include "ellipsoids.h"
+#include "ballintersectconvex.h"
+#include "vpolyintersectvpoly.h"
+#include "samplers.h"
+#include "rounding.h"
+#include "rotating.h"
+#include "gaussian_samplers.h"
+#include "gaussian_annealing.h"
+//#include "sample_only.h"
+#include "misc.h"
+#include "linear_extensions.h"
+#include "spectrahedron.h"
+//#include "volume.h"
+#include "ball_vol_spec.h"
 #include "sdp_generator.h"
 
 
@@ -54,17 +81,17 @@ double generic_volume(Polytope& P, unsigned int walk_step, double e,
     }
 
     // initialization
-    vars<NT, RNGType> var(rnum,n,walk_step,n_threads,0.0,e,0,0.0,0, InnerB.second,rng,urdist,urdist1,
-                          delta,verbose,rand_only,rounding,NN,birk,ball_walk,cdhr,rdhr);
+    vars<NT, RNGType> var(rnum,n,walk_step,n_threads,0.0,e,0,0.0,0, InnerB.second, 0.0, rng,urdist,urdist1,
+                          delta,verbose,rand_only,rounding,NN,birk,ball_walk,cdhr,rdhr, false);
     NT vol;
     if (CG) {
-        vars<NT, RNGType> var2(rnum, n, 10 + n / 10, n_threads, 0.0, e, 0, 0.0, 0, InnerB.second, rng,
-                               urdist, urdist1, delta, verbose, rand_only, rounding, NN, birk, ball_walk, cdhr,rdhr);
+        vars<NT, RNGType> var2(rnum, n, 10 + n / 10, n_threads, 0.0, e, 0, 0.0, 0, InnerB.second, 0.0, rng,
+                               urdist, urdist1, delta, verbose, rand_only, rounding, NN, birk, ball_walk, cdhr,rdhr,false);
         vars_g<NT, RNGType> var1(n, walk_step, N, win_len, 1, e, InnerB.second, rng, C, frac, ratio, delta, false, verbose,
                                  rand_only, rounding, NN, birk, ball_walk, cdhr, rdhr);
-        vol = volume_gaussian_annealing(P, var1, var2, InnerB);
+        //vol = volume_gaussian_annealing(P, var1, var2, InnerB);
     } else {
-        vol = volume(P, var, InnerB);
+        //vol = volume(P, var, InnerB);
     }
 
      return vol;
@@ -224,7 +251,7 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
 
     if(nn.isNotNull() && mm.isNotNull()) {
         spectaedro SP;
-        SP = generateSDP(Rcpp::as<int>(nn), Rcpp::as<int>(mm));
+        SP = generateSDP<lmi, spectaedro, Point>(Rcpp::as<int>(nn), Rcpp::as<int>(mm));
 
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         // the random engine with this seed
@@ -241,7 +268,7 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
 
         vars<NT, RNGType> var(0,Rcpp::as<int>(nn), 1, 1,0.0,0.1,0,0.0,0, InnerB.second,diam_spec,rng,urdist,urdist1,
                               delta,true,false,round,false,false,false,false,false, true);
-        SP::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+        spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
         settings.LMIatP = SP.getLMI().getA0();
 
         preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
@@ -255,22 +282,22 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
             // Hpolytope
             Hpolytope HP;
             HP.init(n, Rcpp::as<MT>(P.field("A")), Rcpp::as<VT>(P.field("b")));
-            return generic_volume<Point, NT>(HP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk, delta,
-                                             cdhr, rdhr, round);
+            //return generic_volume<Point, NT>(HP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk, delta,
+                                            // cdhr, rdhr, round);
         }
         case 2: {
             // Vpolytope
             Vpolytope VP;
             VP.init(n, Rcpp::as<MT>(P.field("V")), VT::Ones(Rcpp::as<MT>(P.field("V")).rows()));
-            return generic_volume<Point, NT>(VP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk, delta,
-                                             cdhr, rdhr, round);
+            //return generic_volume<Point, NT>(VP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk, delta,
+                                           //  cdhr, rdhr, round);
         }
         case 3: {
             // Zonotope
             zonotope ZP;
             ZP.init(n, Rcpp::as<MT>(P.field("G")), VT::Ones(Rcpp::as<MT>(P.field("G")).rows()));
-            return generic_volume<Point, NT>(ZP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk, delta,
-                                             cdhr, rdhr, round);
+            //return generic_volume<Point, NT>(ZP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk, delta,
+                                          //   cdhr, rdhr, round);
         }
         case 4: {
             // Intersection of two V-polytopes
@@ -282,8 +309,8 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
             VPcVP.init(VP1, VP2);
             Rcpp::NumericVector InnerVec(n + 1);
             if (!VPcVP.is_feasible()) throw Rcpp::exception("Empty set!");
-            return generic_volume<Point, NT>(VPcVP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk,
-                                             delta, cdhr, rdhr, round);
+            //return generic_volume<Point, NT>(VPcVP, walkL, e, InnerBall, CG, win_len, N, C, ratio, frac, ball_walk,
+                                           //  delta, cdhr, rdhr, round);
         }
     }
 

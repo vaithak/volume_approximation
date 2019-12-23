@@ -19,6 +19,8 @@ public:
     typedef typename std::vector<NT>::iterator viterator;
     typedef Eigen::Matrix<NT, Eigen::Dynamic,1> Coeff;
 
+    Ball() {}
+
     Ball(Point cc, NT RR) : c(cc),	 R(RR) {}
 
     Point center(){
@@ -33,11 +35,23 @@ public:
         return std::sqrt(R);
     }
 
+    int dimension() {
+        return c.dimension();
+    }
+
     int is_in(Point p){
         if (p.squared_length() <= R)
             return -1;
         else return 0;
     }
+
+    template <class VT, class SpecSettings>
+    std::pair<NT,bool> boundaryOracleBilliard(const VT &p, const VT &v, const VT &a, const NT &b, SpecSettings& settings, bool always_false) {
+
+        return std::pair<NT, bool> (0.0, false);
+
+    }
+
 
     std::pair<NT,NT> line_intersect(Point r,
                                           Point v){
@@ -86,6 +100,15 @@ public:
 
     }
 
+    void compute_reflection(const Point &g, Point &v, const Point &p) {
+
+        Point s = (-1.0)*p;
+        s = s * (1.0 / std::sqrt(s.squared_length()));
+        s = ((-2.0 * v.dot(s)) * s);
+        v = s + v;
+
+    }
+
 private:
     Point  c; //center
     NT     R; //SQUARED radius !!!
@@ -115,6 +138,10 @@ public:
     int num_of_hyperplanes(){
         return P.num_of_hyperplanes();
     }
+
+    //int dimension() {
+        //return P.dimension();
+    //}
 
     unsigned int dimension(){
         return P.dimension();

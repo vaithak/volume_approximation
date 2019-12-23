@@ -31,19 +31,22 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> M
  */
 template <class TMT, class TVT>
 class LMI {
-    typedef TMT MT;
-    typedef TVT VT;
-    MT A0;
+
+    TMT A0;
 
 
     // the matrices A_i, i>0
-    std::vector<MT> matrices;
+    std::vector<TMT> matrices;
     MT_ROWMAJOR vectorMatrix;
     MT_ROWMAJOR gradientMatrix;
-    VT a;
-    typedef typename std::vector<MT>::iterator Iter;
+    TVT a;
+    typedef typename std::vector<TMT>::iterator Iter;
 
 public:
+
+    typedef TMT MT;
+    typedef TVT VT;
+
     LMI() {};
 
     LMI(std::vector<MT> &matrices) {
@@ -378,28 +381,34 @@ class Spectrahedron {
      * The collection of matrices that constitute the linear matrix
      * inequality describing the spectrahedron
      */
-    typedef TLMI LMI;
-    typedef typename TLMI::MT MT;
-    typedef typename TLMI::VT VT;
-    typedef Point PolytopePoint;
-    LMI lmi;
-    VT U;//for computing gradient
+    
+
+    TLMI lmi;
+    typename TLMI::VT U;//for computing gradient
+    typename TLMI::MT LMIatP;
     double maxDouble = std::numeric_limits<double>::max();
     double minDouble = std::numeric_limits<double>::lowest();
 
 public:
 
+    typedef Point PolytopePoint;
+    typedef TLMI LMI;
+    typedef typename TLMI::MT MT;
+    typedef typename TLMI::VT VT;
+    
     Spectrahedron() {}
 
     Spectrahedron(const Spectrahedron &spectrahedron) {
         LMI lmi;
         this->lmi = LMI(spectrahedron.getLMI());
         U.resize(lmi.getDim()*lmi.getMatricesDim());
+        LMIatP.resize(getLMI().getMatricesDim(), getLMI().getMatricesDim());
     }
 
     Spectrahedron(LMI &lmi) {
         this->lmi = lmi;
         U.resize(lmi.getDim()*lmi.getMatricesDim());
+        LMIatP.resize(getLMI().getMatricesDim(), getLMI().getMatricesDim());
     }
 
     const LMI &getLMI() const {
@@ -521,7 +530,7 @@ public:
     * @return (minimum positive eigenvalue, maximum negative eigenvalue)
     */
     std::pair<double, double> boundaryOracle(const VT &position, const VT &direction, const VT &a, double b) {
-        MT A;
+        MT A;LMIatP.resize(getLMI().getMatricesDim(), getLMI().getMatricesDim());
         lmi.evaluate(position, A);
         MT B;
         lmi.evaluateWithoutA0(-1 * direction, B);
@@ -582,17 +591,19 @@ public:
         return lmi.isSingular(x, approx);
     }
 
-    int dimension() {
-        return lmi.getDim();
-    }
+    //int dimension() {
+        //return lmi.getDim();
+    //}
 
     // Cholesky decomposition
     // It is important to be optimized (oxi axreiastoi upologismoi)
-    template <class SpecSet>
-    int is_in(Point &p, SpecSet &settings) {
+    //template <class MT>
+    int is_in(Point &p) {
 
+        lmi.evaluateWithoutA0_revised(p.getCoefficients(), LMIatP);
+        LMIatP += getLMI().getA0();
         //Check and put your code here [for Panagiotis)
-        Spectra::DenseCholesky<double> Bop(-settings.LMIatP);
+        Spectra::DenseCholesky<double> Bop(-LMIatP);
         if (Bop.info() == Spectra::SUCCESSFUL) {
             return -1;
         }
@@ -1042,7 +1053,7 @@ public:
     }
 
     //template<class Point>
-    void compute_reflection(const Point &genEivector, Point &direction) {
+    void compute_reflection(const Point &genEivector, Point &direction, const Point &p) {
 
 //        auto t1 = std::chrono::steady_clock::now();
 
@@ -1076,19 +1087,19 @@ public:
         diam = 0.0;
         radius = maxDouble;
 
-        VT center(getLMI().getDim()), v(getLMI().getDim());
+        VT center(dimension());// v(dimension());
         NT bb=0.0;
 
         for (unsigned int i = 0; i < getLMI().getMatricesDim(); ++i) {
-            v = VT::Zero(getLMI().getMatricesDim());
-            v.set_coord(i, 1.0);
+            //v = VT::Zero(getLMI().getMatricesDim());
+            //v(i) = 1.0;
             std::pair<NT, NT> min_max = boundaryOracleCDHR(center, i, center, bb, CDHRsettings);
             if (min_max.first < radius) radius = min_max.first;
             if (-min_max.second < radius) radius = -min_max.second;
             if (min_max.first-min_max.second > diam ) diam = min_max.first-min_max.second;
         }
 
-        radius = radius / std::sqrt(NT(_d));
+        radius = radius / std::sqrt(NT(dimension()));
         diam = 1.5 * diam;
 
     }

@@ -131,7 +131,7 @@ sample_points <- function(P = NULL, N = NULL, distribution = NULL, WalkType = NU
 #' Z = GenZonotope(2, 4)
 #' vol = volume(Z, WalkType = "RDHR", walk_step = 5)
 #' @export
-volume <- function(P, walk_step = NULL, error = NULL, InnerBall = NULL, Algo = NULL, WalkType = NULL, rounding = NULL, Parameters = NULL) {
-    .Call(`_volesti_volume`, P, walk_step, error, InnerBall, Algo, WalkType, rounding, Parameters)
+volume <- function(P, walk_step = NULL, error = NULL, InnerBall = NULL, Algo = NULL, WalkType = NULL, rounding = NULL, Parameters = NULL, nn = NULL, mm = NULL) {
+    .Call(`_volesti_volume`, P, walk_step, error, InnerBall, Algo, WalkType, rounding, Parameters, nn, mm)
 }
 

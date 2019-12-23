@@ -27,7 +27,7 @@ NT esti_ratio(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W, int Ntot
     bool print = var.verbose;
     NT min_val = std::numeric_limits<NT>::lowest(), max_val = std::numeric_limits<NT>::max(), val,
             countIn = ratio*NT(Ntot), totCount = NT(Ntot), lambda;
-    std::vector<NT> last_W(W,0), lamdas(Pb1.num_of_hyperplanes(),0), Av(Pb1.num_of_hyperplanes(),0);
+    std::vector<NT> last_W(W,0), lamdas(1,0), Av(1,0); // Wrong initialization! do not use in this branch! only for spectrahedron
     std::list<Point> randPoints;
     typename std::vector<NT>::iterator minmaxIt;
     typename std::list<Point>::iterator rpit;
@@ -35,18 +35,18 @@ NT esti_ratio(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W, int Ntot
     Point p_prev=p;
     unsigned int coord_prev;
 
-    if(!var.ball_walk && !isball){
-        uniform_first_point(Pb1,p,p_prev,coord_prev,var.walk_steps,lamdas,Av,lambda,var);
-    }
+    //if(!var.ball_walk && !isball){
+    //    uniform_first_point(Pb1,p,p_prev,coord_prev,var.walk_steps,lamdas,Av,lambda,var);
+   // }
 
     while(true){
 
         if (isball) {
             p = get_point_in_Dsphere<RNGType, Point>(n, radius);
         } else {
-            uniform_next_point(Pb1, p, p_prev, coord_prev, var.walk_steps, lamdas, Av, lambda, var);
+           // uniform_next_point(Pb1, p, p_prev, coord_prev, var.walk_steps, lamdas, Av, lambda, var);
         }
-        if(Pb2.is_in(p)==-1) countIn = countIn + 1.0;
+        //if(Pb2.is_in(p)==-1) countIn = countIn + 1.0;
 
         totCount = totCount + 1.0;
         val = countIn / totCount;
@@ -88,7 +88,7 @@ NT esti_ratio_interval(PolyBall1 &Pb1, PolyBall2 Pb2, NT ratio, NT error, int W,
 
     int n = var.n, index = 0;
     bool print = var.verbose;
-    std::vector<NT> last_W(W,0), lamdas(Pb1.num_of_hyperplanes(),0), Av(Pb1.num_of_hyperplanes(),0);
+    std::vector<NT> last_W(W,0);//, lamdas(Pb1.num_of_hyperplanes(),0), Av(Pb1.num_of_hyperplanes(),0);
     NT val, countIn = ratio*NT(Ntot), totCount = NT(Ntot), sum_sq=0.0, sum=0.0, lambda;
     Point p(n);
     Point p_prev=p;
