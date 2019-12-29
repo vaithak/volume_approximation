@@ -123,14 +123,17 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
     SP.ComputeInnerBall(diam, radius);
     std::cout<<"enclosed ball computed.."<<std::endl;
     var.diameter = diam;
+    var.che_rad = radius;
 
-    int count = 1;
+    int count = 0;
 
     while(true) {
 
+        count++;
+
         randPoints.clear();
         std::cout<<"Sampling 10d points from P.."<<std::endl;
-        rand_point_generator_spec(SP, p, 10 * n, 5, randPoints, var, settings);
+        rand_point_generator_spec(SP, p, 10 * n, 1, randPoints, var, settings);
         std::cout<<"points sampled.."<<std::endl;
         //boundary_rand_point_generator(P, p, 50*n, walk_len, randPoints, var);
 
@@ -161,12 +164,15 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
         }
 
 
-        if (rounding) {
+        if(!rounding && count==1) break;
+
+        if (rounding || count<=1) {
             Eigen::LLT <MT> lltOfA(E); // compute the Cholesky decomposition of E
             MT L = lltOfA.matrixL(); // retrieve factor L  in the decomposition
             MT L_1 = L.inverse();
 
             rand_value *= L_1.determinant();
+            SP.shift(e);
             SP.linear_transformIt(L_1.transpose());
             SP.ComputeInnerBall(diam, radius);
             var.che_rad = radius;

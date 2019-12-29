@@ -208,7 +208,7 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
     Point q(n);
     PolyBall zb_it;
     get_first_ball<RNGType>(P, B0, ratio, radius, lb, ub, alpha, rmax, var);
-    std::cout<<"C' computed..."<<std::endl;
+    std::cout<<"C' computed... ratio_m = "<<ratio<<std::endl;
     ratio0 = ratio;
     rand_point_generator_spec(P, q, Ntot, var.walk_steps, randPoints, var, settings);
     //var.TotSteps = var.TotSteps + NT(Ntot);

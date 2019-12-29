@@ -250,8 +250,9 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
     int type = P.field("type");
 
     if(nn.isNotNull() && mm.isNotNull()) {
-        spectaedro SP;
+        spectaedro SP, SP2;
         SP = generateSDP2<lmi, spectaedro, Point>(Rcpp::as<int>(nn), Rcpp::as<int>(mm));
+        SP2 = SP;
 
         unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
         // the random engine with this seed
@@ -277,6 +278,15 @@ double volume (Rcpp::Reference P,  Rcpp::Nullable<unsigned int> walk_step = R_Ni
         InnerB.second = rad;
 
         vol_spec = volesti_ball_ann(SP, var, var_ban, settings, InnerB, nballs2, false);
+
+
+        std::cout<<"\n----------------------\nNo rounding..\n"<<std::endl;
+        round = false;
+        preproccess_spectrahedron(SP2, p, var, settings, round_value, diam_spec, rad, round);
+        NT vol2 = volesti_ball_ann(SP2, var, var_ban, settings, InnerB, nballs2, false);
+
+        std::cout<<"\n----------------------\n rounding vol = "<<vol_spec * round_value<<"\n no rounding vol = "<<vol2<<std::endl;
+
         return vol_spec * round_value;
     }
 

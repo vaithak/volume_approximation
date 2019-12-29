@@ -90,6 +90,7 @@ NT volesti_ball_ann(Spectrahedron &P, UParameters &var, AParameters &var_ban, Sp
 
     std::cout<<"Estimating the ratios...\n"<<std::endl;
     P.set_LMIatP_A0(settings);
+    std::cout<<"ratio_m = "<<*(ratios.end() - 1)<<std::endl;
     vol *= (window2) ? esti_ratio<RNGType, Point>(*(BallSet.end() - 1), P, *(ratios.end() - 1), er0, win_len, 1200, var,
             true, (*(BallSet.end() - 1)).radius()) :
            esti_ratio_interval<RNGType, Point>(*(BallSet.end() - 1), P, *(ratios.end() - 1), er0, win_len, 1200, prob,

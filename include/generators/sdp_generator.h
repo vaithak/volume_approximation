@@ -102,7 +102,7 @@ Spectrahedron generateSDP2(int n, int m) {
     std::vector<MT> matrices(n + 1);
     matrices[0] = -(M * M.transpose()) - I;
 
-    std::cout<<"A0 = "<<matrices[0]<<"\n"<<std::endl;
+    //std::cout<<"A0 = "<<matrices[0]<<"\n"<<std::endl;
 
 
     MT ones2 = MT::Ones(m/2, m/2);
@@ -114,8 +114,8 @@ Spectrahedron generateSDP2(int n, int m) {
         for (int l = 0; l < m/2; ++l) {
             MMM(l,l) = MM(l,l);
         }
-        std::cout<<"MM = "<<MM<<"\n"<<std::endl;
-        std::cout<<"MM.transpose() = "<<MM.transpose()<<"\n"<<std::endl;
+        //std::cout<<"MM = "<<MM<<"\n"<<std::endl;
+        //std::cout<<"MM.transpose() = "<<MM.transpose()<<"\n"<<std::endl;
 
 
         for (int j = 0; j < m/2; ++j) {
@@ -127,7 +127,7 @@ Spectrahedron generateSDP2(int n, int m) {
 
         //MM = MM + MM.transpose();
 
-        std::cout<<"MMM = "<<MMM<<"\n"<<std::endl;
+        //std::cout<<"MMM = "<<MMM<<"\n"<<std::endl;
 
         MT A;
         A.setZero(m, m);
@@ -138,7 +138,7 @@ Spectrahedron generateSDP2(int n, int m) {
                 A(j+m/2, k+m/2) = -MMM(j, k);
             }
         }
-        std::cout<<"A = "<<A<<"\n"<<std::endl;
+        //std::cout<<"A = "<<A<<"\n"<<std::endl;
         matrices[i] = A;
     }
 

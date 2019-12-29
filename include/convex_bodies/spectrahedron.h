@@ -70,6 +70,10 @@ public:
         matrices[i] = Ai;
     }
 
+    void set_A0(const MT &MatA0) {
+        A0 = MatA0;
+    }
+
     /**
      * Evaluate the lmi for vector x
      *
@@ -672,7 +676,7 @@ public:
         // Initialize and compute
         geigs.init();
         int nconv = geigs.compute();
-        std::cout<<"computation done"<<std::endl;
+        //std::cout<<"computation done"<<std::endl;
 
 
         // Retrieve results
@@ -700,7 +704,7 @@ public:
             throw("Unbounded");
 
         if (settings.hasCuttingPlane) {
-            std::cout<<"check cutting plane"<<std::endl;
+            //std::cout<<"check cutting plane"<<std::endl;
             // check the cutting plane
             double lambda = (b - a.dot(position)) / a[coordinate];
 
@@ -1101,20 +1105,20 @@ public:
         NT bb=0.0;
 
         for (unsigned int i = 0; i < dimension(); ++i) {
-            std::cout<<"i = "<<i<<std::endl;
+            //std::cout<<"i = "<<i<<std::endl;
             //v = VT::Zero(getLMI().getMatricesDim());
             //v(i) = 1.0;
             std::pair<NT, NT> min_max = boundaryOracleCDHR(center, i, center, bb, CDHRsettings);
-            std::cout<<"min_max.first = "<<min_max.first<<", min_max.second = "<<min_max.second<<std::endl;
+            //std::cout<<"min_max.first = "<<min_max.first<<", min_max.second = "<<min_max.second<<std::endl;
             if (min_max.first < radius) radius = min_max.first;
             if (-min_max.second < radius) radius = -min_max.second;
             if (min_max.first-min_max.second > diam ) diam = min_max.first-min_max.second;
         }
 
         radius = radius / std::sqrt(NT(dimension()));
-        diam = 1.5 * diam;
+        //diam = 1.5 * diam;
 
-        std::cout<<"diam = "<<diam<<", radius = "<<radius<<std::endl;
+        //std::cout<<"diam = "<<diam<<", radius = "<<radius<<std::endl;
 
     }
 
@@ -1133,12 +1137,15 @@ public:
             A0 = A0 + e(i)*matrices[i];
         }
 
+        lmi.set_A0(A0);
+
     }
 
-    void linear_transformIt(MT T){
+    void linear_transformIt(const MT &T){
 
         for (int i = 0; i < dimension(); ++i) {
-            set_Ai(T.col(i).sum() * getLMI().getAi(i), i);
+            lmi.evaluateWithoutA0_revised(T.col(i), LMIatP);
+            lmi.set_Ai(LMIatP, i);
         }
 
     }
