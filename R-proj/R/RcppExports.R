@@ -24,6 +24,11 @@ InnerBall <- function(P) {
     .Call(`_volesti_InnerBall`, P)
 }
 
+#' @export
+cotrol_exp <- function(nn = NULL, mm = NULL, N = NULL, M = NULL, walk_length = NULL, walk_type = NULL) {
+    .Call(`_volesti_cotrol_exp`, nn, mm, N, M, walk_length, walk_type)
+}
+
 #' An internal Rccp function as a polytope generator
 #'
 #' @param kind_gen An integer to declare the type of the polytope.
@@ -39,56 +44,9 @@ poly_gen <- function(kind_gen, Vpoly_gen, dim_gen, m_gen) {
     .Call(`_volesti_poly_gen`, kind_gen, Vpoly_gen, dim_gen, m_gen)
 }
 
-#' Sample points from a convex Polytope (H-polytope, V-polytope or a zonotope) or use direct methods for uniform sampling from the unit or the canonical or an arbitrary \eqn{d}-dimensional simplex and the boundary or the interior of a \eqn{d}-dimensional hypersphere
-#'
-#' Sample N points with uniform or multidimensional spherical gaussian -centered in an internal point- target distribution.
-#' The \eqn{d}-dimensional unit simplex is the set of points \eqn{\vec{x}\in \R^d}, s.t.: \eqn{\sum_i x_i\leq 1}, \eqn{x_i\geq 0}. The \eqn{d}-dimensional canonical simplex is the set of points \eqn{\vec{x}\in \R^d}, s.t.: \eqn{\sum_i x_i = 1}, \eqn{x_i\geq 0}.
-#'
-#' @param P A convex polytope. It is an object from class (a) Hpolytope or (b) Vpolytope or (c) Zonotope.
-#' @param N The number of points that the function is going to sample from the convex polytope. The default value is \eqn{100}.
-#' @param distribution Optional. A string that declares the target distribution: a) \code{'uniform'} for the uniform distribution or b) \code{'gaussian'} for the multidimensional spherical distribution. The default target distribution is uniform.
-#' @param WalkType Optional. A string that declares the random walk method: a) \code{'CDHR'} for Coordinate Directions Hit-and-Run, b) \code{'RDHR'} for Random Directions Hit-and-Run or c) \code{'BW'} for Ball Walk. The default walk is \code{'CDHR'}.
-#' @param walk_step Optional. The number of the steps for the random walk. The default value is \eqn{\lfloor 10 + d/10\rfloor}, where \eqn{d} implies the dimension of the polytope.
-#' @param exact A boolean parameter. It should be used for the uniform sampling from the boundary or the interior of a hypersphere centered at the origin or from the unit or the canonical or an arbitrary simplex. The arbitrary simplex has to be given as a V-polytope. For the rest well known convex bodies the dimension has to be declared and the type of body as well as the radius of the hypersphere.
-#' @param body A string that declares the type of the body for the exact sampling: a) \code{'unit simplex'} for the unit simplex, b) \code{'canonical simplex'} for the canonical simplex, c) \code{'hypersphere'} for the boundary of a hypersphere centered at the origin, d) \code{'ball'} for the interior of a hypersphere centered at the origin.
-#' @param Parameters A list for the parameters of the methods:
-#' \itemize{
-#' \item{\code{variance} }{ The variance of the multidimensional spherical gaussian. The default value is 1.}
-#' \item{\code{dimension} }{ An integer that declares the dimension when exact sampling is enabled for a simplex or a hypersphere.}
-#' \item{\code{radius} }{ The radius of the \eqn{d}-dimensional hypersphere. The default value is \eqn{1}.}
-#' \item{\code{BW_rad} }{ The radius for the ball walk.}
-#' }
-#' @param InnerPoint A \eqn{d}-dimensional numerical vector that defines a point in the interior of polytope P.
-#'
-#' @references \cite{R.Y. Rubinstein and B. Melamed,
-#' \dQuote{Modern simulation and modeling} \emph{ Wiley Series in Probability and Statistics,} 1998.}
-#' @references \cite{A Smith, Noah and W Tromble, Roy,
-#' \dQuote{Sampling Uniformly from the Unit Simplex,} \emph{ Center for Language and Speech Processing Johns Hopkins University,} 2004.}
-#' @references \cite{Art B. Owen,
-#' \dQuote{Monte Carlo theory, methods and examples,} \emph{ Art Owen,} 2009.}
-#'
-#' @return A \eqn{d\times N} matrix that contains, column-wise, the sampled points from the convex polytope P.
-#' @examples
-#' # uniform distribution from the 3d unit cube in V-representation using ball walk
-#' P = GenCube(3, 'V')
-#' points = sample_points(P, WalkType = "BW", walk_step = 5)
-#'
-#' # gaussian distribution from the 2d unit simplex in H-representation with variance = 2
-#' A = matrix(c(-1,0,0,-1,1,1), ncol=2, nrow=3, byrow=TRUE)
-#' b = c(0,0,1)
-#' P = Hpolytope$new(A,b)
-#' points = sample_points(P, distribution = "gaussian", Parameters = list("variance" = 2))
-#'
-#' # uniform points from the boundary of a 10-dimensional hypersphere
-#' points = sample_points(exact = TRUE, body = "hypersphere", Parameters = list("dimension" = 10))
-#'
-#' # 10000 uniform points from a 2-d arbitrary simplex
-#' V = matrix(c(2,3,-1,7,0,0),ncol = 2, nrow = 3, byrow = TRUE)
-#' P = Vpolytope$new(V)
-#' points = sample_points(P, N = 10000, exact = TRUE)
 #' @export
-sample_points <- function(P = NULL, N = NULL, distribution = NULL, WalkType = NULL, walk_step = NULL, exact = NULL, body = NULL, Parameters = NULL, InnerPoint = NULL) {
-    .Call(`_volesti_sample_points`, P, N, distribution, WalkType, walk_step, exact, body, Parameters, InnerPoint)
+spectra_plot <- function(nn = NULL, mm = NULL, N1 = NULL, N2 = NULL, walk_length = NULL) {
+    .Call(`_volesti_spectra_plot`, nn, mm, N1, N2, walk_length)
 }
 
 #' The main function for volume approximation of a convex Polytope (H-polytope, V-polytope or a zonotope)

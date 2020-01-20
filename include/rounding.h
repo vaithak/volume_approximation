@@ -191,6 +191,7 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
     SP.ComputeInnerBall(diam, radius);
     var.che_rad = radius;
     var.diameter = diam;
+    std::cout<<"preproccess completed.."<<std::endl;
 
 }
 

@@ -16,13 +16,13 @@
 #include "optimization/SpectraLU.h"
 #include "SpectraLU.h"
 
-const double ZERO = 0.0000000001;
-double ORACLE_TIME;
-double REFLECTION_TIME;
-int BOUNDARY_CALLS;
+//const double ZERO = 0.0000000001;
+//double ORACLE_TIME;
+//double REFLECTION_TIME;
+//int BOUNDARY_CALLS;
 
 //typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> MT;
-typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MT_ROWMAJOR;
+//typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MT_ROWMAJOR;
 //typedef Eigen::Matrix<double, Eigen::Dynamic, 1> VT;
 //typedef Eigen::SparseMatrix<double> SpMat;
 
@@ -34,16 +34,17 @@ class LMI {
 
     TMT A0;
 
-
+    typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MT_ROWMAJOR2;
     // the matrices A_i, i>0
     std::vector<TMT> matrices;
-    MT_ROWMAJOR vectorMatrix;
-    MT_ROWMAJOR gradientMatrix;
+    MT_ROWMAJOR2 vectorMatrix;
+    MT_ROWMAJOR2 gradientMatrix;
     TVT a;
     typedef typename std::vector<TMT>::iterator Iter;
 
 public:
 
+  typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MT_ROWMAJOR;
     typedef TMT MT;
     typedef TVT VT;
 
@@ -233,6 +234,14 @@ public:
         return res;
     }
 
+    void evaluateHMC(const VT &x, MT &res) const {
+        int dim = A0.rows();
+        res = MT(A0);
+        int i = 0;
+
+        for (auto M : matrices)
+            res += x(i++) * M;
+    }
 
     int getDim() const {
         return matrices.size();
@@ -403,6 +412,7 @@ public:
     typedef TLMI LMI;
     typedef typename TLMI::MT MT;
     typedef typename TLMI::VT VT;
+    typedef typename TLMI::MT_ROWMAJOR MT_ROWMAJOR;
     
     Spectrahedron() {}
 
@@ -487,7 +497,7 @@ public:
         lmi.evaluate(position, A);
         MT B;
         lmi.evaluateWithoutA0(-1 * direction, B);
-        BOUNDARY_CALLS++;
+        //BOUNDARY_CALLS++;
         // Construct matrix operation object using the wrapper classes
         Spectra::DenseSymMatProd<double> op(B);
         Spectra::DenseCholesky<double> Bop(-A);
@@ -544,7 +554,7 @@ public:
         lmi.evaluateWithoutA0(-1 * direction, B);
 
         Eigen::GeneralizedEigenSolver<MT> ges(A, B);
-        BOUNDARY_CALLS++;
+        //BOUNDARY_CALLS++;
         typename Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType alphas = ges.alphas();
         VT betas = ges.betas();
 
@@ -658,11 +668,10 @@ public:
     boundaryOracleCDHR(const VT &position, const int& coordinate, const VT &a, const double &b,
                            BoundaryOracleCDHRSettings &settings) {
 
-        ORACLE_TIME++;
+        //ORACLE_TIME++;
         if (settings.first) {
             lmi.evaluate_revised(position, settings.LMIatP);
         }
-
 
         // Construct matrix operation object using the wrapper classes
 
@@ -675,8 +684,9 @@ public:
 
         // Initialize and compute
         geigs.init();
+        //std::cout<<"CDHR initialization done"<<std::endl;
         int nconv = geigs.compute();
-        //std::cout<<"computation done"<<std::endl;
+        //std::cout<<"CDHR computation done"<<std::endl;
 
 
         // Retrieve results
@@ -769,7 +779,7 @@ public:
             lmi.evaluateWithoutA0_revised(a, settings.Obj);
         }
 
-        BOUNDARY_CALLS++;
+        //BOUNDARY_CALLS++;
 
         if (settings.computeB)
             lmi.evaluateWithoutA0_revised(direction, settings.B);
@@ -790,7 +800,7 @@ public:
                 Spectra::DenseCholesky<double> Bop(-settings.LMIatP - lambda * settings.B);
 
                 if (Bop.info() == Spectra::SUCCESSFUL) {
-                    REFLECTION_TIME++;
+                   // REFLECTION_TIME++;
                     settings.setMaxSegmentLength(lambdaMinPositive);
                     return {lambdaMinPositive, hitCuttingPlane};
                 }
@@ -872,19 +882,19 @@ public:
         }
     };
 
-    //template<class Point>
+    template<class SettingClass>
     double boundaryOracle_Boltzmann_HMC(const Point &_position, const Point &_direction, const Point &_objectiveFunction,
-                                 const double &temp, BoundaryOracleBoltzmannHMCSettings &settings) {
+                                        const double &temp, SettingClass &settings) {
 
         const VT &position = _position.getCoefficients();
         const VT &direction = _direction.getCoefficients();
         const VT &objectiveFunction = _objectiveFunction.getCoefficients();
-        BOUNDARY_CALLS++;
+        //BOUNDARY_CALLS++;
         unsigned int matrixDim = lmi.getMatricesDim();
-        if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
+//        if (!lmi.isNegativeSemidefinite(position)) throw "out\n";
 //            std::cout << objectiveFunction << "\n";
 //        if (first) {
-        lmi.evaluate(position, settings.B0);
+        lmi.evaluateHMC(position, settings.B0);
         lmi.evaluateWithoutA0(objectiveFunction, settings.B2);
 //        }
 
@@ -892,7 +902,7 @@ public:
         MT B2temp = settings.B2 / (-2 * temp);
 
         // create pencil matrix
-        MT AA(2 * matrixDim, 2 * matrixDim);
+        MT AA(2 *matrixDim, 2 * matrixDim);
         MT BB(2 * matrixDim, 2 * matrixDim);
 
         BB.block(matrixDim, matrixDim, matrixDim, matrixDim) = -1 * settings.B0;
@@ -919,39 +929,39 @@ public:
 
         // Construct matrix operation object using the wrapper classes
 //        Spectra::SparseSymMatProd<double> op(A);
-        Spectra::DenseSymMatProd<double> op(BB);
+//        Spectra::DenseSymMatProd<double> op(BB);
 //        Spectra::SparseRegularInverse<double> Bop(B);
 
-        Spectra::SpectraLU<double> Bop(AA);
+//        Spectra::SpectraLU<double> Bop(AA);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
 //        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::DenseCholesky<double>, Spectra::GEIGS_CHOLESKY>
 //                geigs(&op, &Bop, 2, 4);
 
         // Construct generalized eigen solver object, requesting the largest three generalized eigenvalues
-        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::SpectraLU<double>, Spectra::GEIGS_REGULAR_INVERSE>
-                geigs(&op, &Bop, 1, 3);
+//        Spectra::SymGEigsSolver<double, Spectra::BOTH_ENDS, Spectra::DenseSymMatProd<double>, Spectra::SpectraLU<double>, Spectra::GEIGS_REGULAR_INVERSE>
+//                geigs(&op, &Bop, 1, 3);
 
         // Initialize and compute
-        geigs.init();
-        int nconv = geigs.compute();
+//        geigs.init();
+//        int nconv = geigs.compute();
 //         Retrieve results
-        Eigen::VectorXd evalues;
-        Eigen::MatrixXd evecs;
-        if(geigs.info() == Spectra::SUCCESSFUL)
-        {
-            evalues = geigs.eigenvalues();
-            evecs = geigs.eigenvectors();
-        }
-
+//        Eigen::VectorXd evalues;
+//        Eigen::MatrixXd evecs;
+//        if(geigs.info() == Spectra::SUCCESSFUL)
+//        {
+//            evalues = geigs.eigenvalues();
+//            evecs = geigs.eigenvectors();
+//        }
+//
         double lambdaMinPositive = 0;
 
-        if (nconv == 1) {
-            lambdaMinPositive = 1/evalues(0);
-            settings.genEigenvector = Point(evecs.col(0).segment(matrixDim, matrixDim));
-        } else {
-            lambdaMinPositive = 0;
-        }
+//        if (nconv == 1) {
+//            lambdaMinPositive = 1/evalues(0);
+//            settings.genEigenvector = Point(evecs.col(0).segment(matrixDim, matrixDim));
+//        } else {
+//            lambdaMinPositive = 0;
+//        }
 
 //        Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> es(AA, -1*BB);
 //
@@ -974,40 +984,44 @@ public:
 
 
 
+//        this->getLMI().print();
+//        std::cout << position << "\n" << direction << "\n" << temp<<"\n";
+        Eigen::GeneralizedEigenSolver<MT> ges(AA, -BB);
 
-//        Eigen::GeneralizedEigenSolver<MT> ges(AA, -BB);
-//
-//        Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType alphas = ges.alphas();
-//        VT betas = ges.betas();
-//
-//        double lambdaMaxNegative = minDouble;
-//        lambdaMinPositive = maxDouble;
-//        int index = 0;
-//
-//        for (int i = 0; i < alphas.rows(); i++) {
-//
-//            if (betas(i) == 0 || alphas(i).imag() != 0)  //TODO WARNING do what here?
-//                continue;
-//
-//            double lambda = alphas(i).real() / betas(i);
-////            std::cout << lambda << " e\n";
-//            if (lambda > 0 && lambda < lambdaMinPositive) {
-//                lambdaMinPositive = lambda;
-//                index = i;
-//            }
-//            if (lambda < 0 && lambda > lambdaMaxNegative)
-//                lambdaMaxNegative = lambda;
-//        }
-////        std::cout << lambdaMinPositive << "eval\n";
-//
-//        Eigen::GeneralizedEigenSolver<MT>::EigenvectorsType eivecs = ges.eigenvectors();
-//        Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivec = eivecs.col(index);
-//
-//        settings.genEigenvector = Point(matrixDim);
-//
-//        for (int i = 0; i < matrixDim; i++)
-//            settings.genEigenvector.set_coord(i, eivec(matrixDim + i).real());
-//
+        typename Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType alphas = ges.alphas();
+        VT betas = ges.betas();
+
+        double lambdaMaxNegative = minDouble;
+        lambdaMinPositive = maxDouble;
+        int index = 0;
+
+        for (int i = 0; i < alphas.rows(); i++) {
+
+            if (betas(i) == 0 || alphas(i).imag() != 0)  //TODO WARNING do what here?
+                continue;
+
+            double lambda = alphas(i).real() / betas(i);
+//            std::cout << lambda << " e\n";
+            if (lambda > 0 && lambda < lambdaMinPositive) {
+                lambdaMinPositive = lambda;
+                index = i;
+            }
+            if (lambda < 0 && lambda > lambdaMaxNegative)
+                lambdaMaxNegative = lambda;
+        }
+//        std::cout << objectiveFunction <<"\n";
+//        std::cout << lambdaMinPositive << "eval\n";
+//        std::cout << AA <<"\n";
+//        std::cout << BB;
+
+        typename Eigen::GeneralizedEigenSolver<MT>::EigenvectorsType eivecs = ges.eigenvectors();
+        typename Eigen::GeneralizedEigenSolver<MT>::ComplexVectorType eivec = eivecs.col(index);
+
+        settings.genEigenvector = Point(matrixDim);
+
+        for (int i = 0; i < matrixDim; i++)
+            settings.genEigenvector.set_coord(i, eivec(matrixDim + i).real());
+
 
 
 
@@ -1015,15 +1029,19 @@ public:
         return lambdaMinPositive;
     }
 
-    //template<class Point>
-    void compute_reflection(BoundaryOracleBoltzmannHMCSettings &settings, Point &direction) {
+    template<class SettingClass>
+    void compute_reflection(SettingClass &settings, Point &direction) {
         std::vector<MT> matrices = lmi.getMatrices();
         int dim = matrices.size();
         settings.gradient = Point(dim);
 
+        Point q(dim),w(dim);
         for (int i = 0; i < dim; i++) {
-            settings.gradient.set_coord(i, settings.genEigenvector.dot(
-                    (settings.genEigenvector.matrix_left_product(matrices[i]))));
+          q = settings.genEigenvector;
+          w = Point(matrices[i] * q.getCoefficients());
+          settings.gradient.set_coord(i, q.dot(w));
+            //settings.gradient.set_coord(i, settings.genEigenvector.dot(
+                    //(settings.genEigenvector.matrix_left_product(matrices[i]))));
         }
 
         settings.gradient.normalize();
@@ -1101,14 +1119,18 @@ public:
         diam = 0.0;
         radius = maxDouble;
 
-        VT center(dimension());// v(dimension());
+        VT center(dimension());
+        Point v(dimension());// v(dimension());
         NT bb=0.0;
 
         for (unsigned int i = 0; i < dimension(); ++i) {
             //std::cout<<"i = "<<i<<std::endl;
+            v = Point(dimension());
             //v = VT::Zero(getLMI().getMatricesDim());
             //v(i) = 1.0;
-            std::pair<NT, NT> min_max = boundaryOracleCDHR(center, i, center, bb, CDHRsettings);
+            //std::pair<NT, NT> min_max = boundaryOracleCDHR(center, i, center, bb, CDHRsettings);
+            v.set_coord(i, 1.0);
+            std::pair<NT, NT> min_max = boundaryOracle(center, v.get_coefficients());
             //std::cout<<"min_max.first = "<<min_max.first<<", min_max.second = "<<min_max.second<<std::endl;
             if (min_max.first < radius) radius = min_max.first;
             if (-min_max.second < radius) radius = -min_max.second;
@@ -1116,7 +1138,7 @@ public:
         }
 
         radius = radius / std::sqrt(NT(dimension()));
-        //diam = 1.5 * diam;
+        diam = 1.3 * diam;
 
         //std::cout<<"diam = "<<diam<<", radius = "<<radius<<std::endl;
 
