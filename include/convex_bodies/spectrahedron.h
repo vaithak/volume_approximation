@@ -437,6 +437,13 @@ public:
         return getLMI().getDim();
     }
 
+    void print_matrices() {
+        std::cout<<"A0 = \n"<<getLMI().getA0()<<"\n"<<std::endl;
+        for (int i = 0; i < dimension(); ++i) {
+            std::cout<<"A"<<i+1<<" = \n"<<getLMI().getAi(i)<<"\n"<<std::endl;
+        }
+    }
+
     /**
      * Compute the intersection of a 1D line and the spectrahedron by finding the
      * generalized eigenvalues of (LMI(x), A0 - LMI(direction))

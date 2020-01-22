@@ -10,6 +10,8 @@
 #include <Rcpp.h>
 #include <RcppEigen.h>
 #include <chrono>
+#include <fstream>
+#include <iostream>
 #include "cartesian_geom/cartesian_kernel.h"
 #include <boost/random.hpp>
 #include <boost/random/uniform_int.hpp>
@@ -69,8 +71,7 @@ Rcpp::NumericMatrix spectra_plot(Rcpp::Nullable<int> nn = R_NilValue,
     p = Point(n);
     boundary_rand_point_generator_spec(SP, p, Rcpp::as<unsigned int>(N1), Rcpp::as<unsigned int>(walk_length), randPoints, var);
     std::cout<<"Boundary points sampled.."<<std::endl;
-
-
+    
     settings.LMIatP = SP.getLMI().getA0();
     p = Point(n);
     rand_point_generator_spec(SP, p, Rcpp::as<unsigned int>(N2), Rcpp::as<unsigned int>(walk_length), randPoints2, var, settings);
@@ -84,7 +85,7 @@ Rcpp::NumericMatrix spectra_plot(Rcpp::Nullable<int> nn = R_NilValue,
     p = Point(n);
     Point c = get_direction<RNGType, Point, NT>(n);
     std::cout<<c.get_coefficients()<<std::endl;
-    NT T = 1.5;
+    NT T = 1.0;
     std::cout<<"Starting HMC sampling.."<<std::endl;
     for (int i = 0; i < Rcpp::as<unsigned int>(N2); ++i) {
         for (int j = 0; j < Rcpp::as<unsigned int>(walk_length); ++j) {
@@ -92,8 +93,13 @@ Rcpp::NumericMatrix spectra_plot(Rcpp::Nullable<int> nn = R_NilValue,
         }
         randPoints3.push_back(p);
     }
-    std::cout<<"HMC points sampled.."<<std::endl;
+    std::cout<<"HMC points sampled..\n"<<std::endl;
 
+    std::filebuf fb;
+    fb.open ("sdp_prob.txt",std::ios::out);
+    std::ostream os(&fb);
+    writeSDPAFormatFile<MT>(os, SP.getLMI(), c.get_coefficients());
+    //SP.print_matrices();
 
     MT RetMat(n, 2*Rcpp::as<unsigned int>(N1)+ 2*Rcpp::as<unsigned int>(N2));
     unsigned int jj = 0;

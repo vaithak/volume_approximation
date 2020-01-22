@@ -10,6 +10,8 @@
 #include <Rcpp.h>
 #include <RcppEigen.h>
 #include <chrono>
+#include <fstream>
+#include <iostream>
 #include "cartesian_geom/cartesian_kernel.h"
 #include <boost/random.hpp>
 #include <boost/random/uniform_int.hpp>
@@ -45,6 +47,7 @@ Rcpp::NumericMatrix opti_exp(Rcpp::Nullable<int> nn = R_NilValue,
 
     spectaedro SP;//, SP2;
     SP = generateSDP2<lmi, spectaedro, Point>(Rcpp::as<int>(nn), Rcpp::as<int>(mm));
+
     //SP2 = SP;
 
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -77,15 +80,26 @@ Rcpp::NumericMatrix opti_exp(Rcpp::Nullable<int> nn = R_NilValue,
     //settings2.LMIatP = SP.getLMI().getA0();
     Point c = get_direction<RNGType, Point, NT>(n);
 
-    NT T = 10;
-    std::cout<<"Starting HMC sampling.."<<std::endl;
-    for (int i = 0; i < Rcpp::as<unsigned int>(N2); ++i) {
-        for (int j = 0; j < Rcpp::as<unsigned int>(walk_length); ++j) {
-            HMC_boltzmann_reflections(SP, p, diam_spec, var, c, T, settings2);
+    std::filebuf fb;
+    fb.open ("sdp_prob.txt",std::ios::out);
+    std::ostream os(&fb);
+    writeSDPAFormatFile<MT>(os, SP.getLMI(), c.get_coefficients());
+
+    NT T = 2.0 * var.diameter;
+    std::cout<<"Starting sampling.."<<std::endl;
+    for (int k = 0; k < 5; ++k) {
+
+        for (int i = 0; i < Rcpp::as<unsigned int>(N2); ++i) {
+            for (int j = 0; j < Rcpp::as<unsigned int>(walk_length); ++j) {
+                HMC_boltzmann_reflections(SP, p, diam_spec, var, c, T, settings2);
+            }
+            randPoints.push_back(p);
         }
-        randPoints3.push_back(p);
+        std::cout << "HMC points sampled.." << std::endl;
+
+
+
     }
-    std::cout<<"HMC points sampled.."<<std::endl;
 
 
     hit_and_run_Boltzmann_spec(p, SP, var, c, T);

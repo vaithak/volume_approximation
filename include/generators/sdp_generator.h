@@ -149,6 +149,26 @@ Spectrahedron generateSDP2(int n, int m) {
     //return optimization::sdp_problem<Point>(spectrahedron, obj);
 }
 
+template <class MT, class LMI, class VT>
+void writeSDPAFormatFile(std::ostream &os, const LMI &lmi, const VT &objectiveFunction) {
+    int dim = lmi.getDim();
+    MT A0 = lmi.getA0();
+    std::vector<MT> matrices = lmi.getMatrices();
+    os << dim << "\n";
+    os << 1 << "\n";
+    os << A0.rows() << "\n";
+
+    os << objectiveFunction.transpose() << "\n";
+
+    for (int i = 0; i < A0.rows(); i++)
+        os << A0.row(i) << "\n";
+
+    for (MT matrix : matrices)
+        for (int i = 0; i < matrix.rows(); i++)
+            os << -1 * matrix.row(i) << "\n";
+}
+
+
 
 
 #endif //VOLESTI_SDP_GENERATOR_H
