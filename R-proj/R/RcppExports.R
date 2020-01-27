@@ -29,6 +29,11 @@ cotrol_exp <- function(nn = NULL, mm = NULL, N = NULL, M = NULL, walk_length = N
     .Call(`_volesti_cotrol_exp`, nn, mm, N, M, walk_length, walk_type)
 }
 
+#' @export
+opti_exp <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
+    .Call(`_volesti_opti_exp`, nn, mm, N, walk_length)
+}
+
 #' An internal Rccp function as a polytope generator
 #'
 #' @param kind_gen An integer to declare the type of the polytope.

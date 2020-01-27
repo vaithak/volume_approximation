@@ -30,9 +30,7 @@
 Rcpp::NumericMatrix opti_exp(Rcpp::Nullable<int> nn = R_NilValue,
                                Rcpp::Nullable<int> mm = R_NilValue,
                                Rcpp::Nullable<unsigned int> N = R_NilValue,
-                               Rcpp::Nullable<unsigned int> M = R_NilValue,
-                               Rcpp::Nullable<unsigned int> walk_length = R_NilValue,
-                               Rcpp::Nullable<unsigned int> walk_type = R_NilValue){
+                               Rcpp::Nullable<unsigned int> walk_length = R_NilValue){
 
     typedef double NT;
     typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
@@ -67,7 +65,7 @@ Rcpp::NumericMatrix opti_exp(Rcpp::Nullable<int> nn = R_NilValue,
     vars<NT, RNGType> var(0,Rcpp::as<int>(nn), 1, 1,0.0,0.1,0,0.0,0, InnerB.second,diam_spec,rng,urdist,urdist1,
                           -1.0,true,false,round,false,false,false,false,false, true);
 
-    std::list<Point> randPoints;
+    std::list<Point> randPoints, randPoints2;
     spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
     settings.LMIatP = SP.getLMI().getA0();
     preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
@@ -85,11 +83,18 @@ Rcpp::NumericMatrix opti_exp(Rcpp::Nullable<int> nn = R_NilValue,
     std::ostream os(&fb);
     writeSDPAFormatFile<MT>(os, SP.getLMI(), c.get_coefficients());
 
-    NT T = 2.0 * var.diameter;
+    NT T = 2.0 * var.diameter, min_val, temp_val;
     std::cout<<"Starting sampling.."<<std::endl;
+    VT p_mean(n);
+    MT Ratios(4,5);
     for (int k = 0; k < 5; ++k) {
 
-        for (int i = 0; i < Rcpp::as<unsigned int>(N2); ++i) {
+        randPoints.clear();
+        randPoints2.clear();
+        std::cout << "T = " << T << std::endl;
+
+        //p = Point(n);
+        for (int i = 0; i < Rcpp::as<unsigned int>(N); ++i) {
             for (int j = 0; j < Rcpp::as<unsigned int>(walk_length); ++j) {
                 HMC_boltzmann_reflections(SP, p, diam_spec, var, c, T, settings2);
             }
@@ -97,12 +102,39 @@ Rcpp::NumericMatrix opti_exp(Rcpp::Nullable<int> nn = R_NilValue,
         }
         std::cout << "HMC points sampled.." << std::endl;
 
+        p = Point(n);
+        for (int i = 0; i < Rcpp::as<unsigned int>(N); ++i) {
+            for (int j = 0; j < Rcpp::as<unsigned int>(walk_length); ++j) {
+                hit_and_run_Boltzmann_spec(p, SP, var, c, T);
+            }
+            randPoints2.push_back(p);
+        }
+        std::cout << "HNR points sampled.." << std::endl;
 
+        p_mean = VT::Zero(n);
+        min_val = std::numeric_limits<NT>::max();
+        for (typename std::list<Point>::iterator rpit = randPoints.begin(); rpit!=randPoints.end(); rpit++) {
+            p_mean += (*rpit).getCoefficients();
+            temp_val = (c.getCoefficients()).dot((*rpit).getCoefficients());
+            if (temp_val < min_val) min_val = temp_val;
+        }
+        p_mean = p_mean * (1.0 / NT(Rcpp::as<unsigned int>(N)));
+        Ratios(0,k) = p_mean.dot(c.getCoefficients());
+        Ratios(1,k) = min_val;
 
+        p_mean = VT::Zero(n);
+        min_val = std::numeric_limits<NT>::max();
+        for (typename std::list<Point>::iterator rpit = randPoints2.begin(); rpit!=randPoints2.end(); rpit++) {
+            p_mean += (*rpit).getCoefficients();
+            temp_val = (c.getCoefficients()).dot((*rpit).getCoefficients());
+            if (temp_val < min_val) min_val = temp_val;
+        }
+        p_mean = p_mean * (1.0 / NT(Rcpp::as<unsigned int>(N)));
+        Ratios(2,k) = p_mean.dot(c.getCoefficients());
+        Ratios(3,k) = min_val;
+
+        T = T * 0.3;
     }
-
-
-    hit_and_run_Boltzmann_spec(p, SP, var, c, T);
 
     return Rcpp::wrap(Ratios);
 

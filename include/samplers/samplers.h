@@ -412,6 +412,25 @@ void hit_and_run(Point &p,
     p = ((1 - lambda) * b2) + p;
 }
 
+template <typename NT>
+NT expCDF(NT x, NT lambda) {
+  return 1.0 - std::exp(- lambda*x);
+}
+
+template <typename NT>
+NT expQuantile(NT p, NT lambda) {
+  return -std::log(1.0 - p) / lambda;
+}
+
+template <class RNGType, typename NT>
+NT texp(NT lambda, NT a, NT b, RNGType& rng) {
+  boost::random::uniform_real_distribution<> urdist(0, 1);
+  NT u = urdist(rng);
+  NT cdfA = expCDF(a, lambda);
+  NT cdfB = expCDF(b, lambda);
+  
+  return expQuantile(cdfA + u*(cdfB - cdfA), lambda);
+}
 
 template <class Polytope, class Point, class Parameters, class MT>
 void hit_and_run_Boltzmann(Point &p,
@@ -438,25 +457,26 @@ void hit_and_run_Boltzmann(Point &p,
     double lambda;
 
     if (c1 > c2) {
-        lambda = texp((c1 - c2) / BoltzmannParameter, 0, min_plus - max_minus, rng);
+        lambda = texp((c1 - c2) / BoltzmannParameter, NT(0), min_plus - max_minus, rng);
         p = b2;
     }
     else {
-        lambda = -texp((c2 - c1) / BoltzmannParameter, 0, min_plus - max_minus, rng);
+        lambda = -texp((c2 - c1) / BoltzmannParameter, NT(0), min_plus - max_minus, rng);
         p = b1;
     }
 
     p = (lambda * l) + p;
 }
 
-template <class Spectrahedron, class Point, class Parameters, class MT>
+
+template <class Spectrahedron, class Point, class Parameters, typename NT>
 void hit_and_run_Boltzmann_spec(Point &p,
                                 Spectrahedron &P,
                            Parameters &var,
                            Point& BoltzmannDirection,
-                           double BoltzmannParameter) {
+                           NT BoltzmannParameter) {
     typedef typename Parameters::RNGType RNGType;
-    typedef typename Point::FT NT;
+    //typedef typename Point::FT NT;
     typedef typename Spectrahedron::VT VT;
     unsigned int n =p.dimension();
     RNGType &rng = var.rng;
@@ -470,17 +490,17 @@ void hit_and_run_Boltzmann_spec(Point &p,
     NT max_minus = dbpair.second;
     Point b1 = (min_plus * l) + p;
     Point b2 = (max_minus * l) + p;
-    double c1 = BoltzmannDirection.dot(b1);
-    double c2 = BoltzmannDirection.dot(b2);
+    NT c1 = BoltzmannDirection.dot(b1);
+    NT c2 = BoltzmannDirection.dot(b2);
 
-    double lambda;
+    NT lambda;
 
     if (c1 > c2) {
-        lambda = texp((c1 - c2) / BoltzmannParameter, 0, min_plus - max_minus, rng);
+        lambda = texp((c1 - c2) / BoltzmannParameter, NT(0), min_plus - max_minus, rng);
         p = b2;
     }
     else {
-        lambda = -texp((c2 - c1) / BoltzmannParameter, 0, min_plus - max_minus, rng);
+        lambda = -texp((c2 - c1) / BoltzmannParameter, NT(0), min_plus - max_minus, rng);
         p = b1;
     }
 
