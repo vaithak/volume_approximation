@@ -88,8 +88,8 @@ Rcpp::NumericMatrix cotrol_exp(Rcpp::Nullable<int> nn = R_NilValue,
         std::sort(inner_prods.begin(), inner_prods.end());
 
         Cs.row(i) = c.getCoefficients();
-        Bs(i,0) = inner_prods[int(5000*(0.1+i*0.05))/2];
-        Bs(i,1) = inner_prods[5000 - int(5000*(0.1+i*0.05))/2];
+        Bs(i,0) = inner_prods[int(5000*(0.1+i*0.05))/2.0];
+        Bs(i,1) = inner_prods[5000 - int(5000*(0.1+i*0.05))/2.0];
 
     }
     std::cout<<"Initialization completed.."<<std::endl;

@@ -25,8 +25,18 @@ InnerBall <- function(P) {
 }
 
 #' @export
+control_billiard <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
+    .Call(`_volesti_control_billiard`, nn, mm, N, walk_length)
+}
+
+#' @export
 cotrol_exp <- function(nn = NULL, mm = NULL, N = NULL, M = NULL, walk_length = NULL, walk_type = NULL) {
     .Call(`_volesti_cotrol_exp`, nn, mm, N, M, walk_length, walk_type)
+}
+
+#' @export
+opti_hmc <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
+    .Call(`_volesti_opti_hmc`, nn, mm, N, walk_length)
 }
 
 #' @export
