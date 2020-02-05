@@ -35,6 +35,11 @@ cotrol_exp <- function(nn = NULL, mm = NULL, N = NULL, M = NULL, walk_length = N
 }
 
 #' @export
+generator_sdp <- function(nn = NULL, mm = NULL, num = NULL) {
+    .Call(`_volesti_generator_sdp`, nn, mm, num)
+}
+
+#' @export
 opti_hmc <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
     .Call(`_volesti_opti_hmc`, nn, mm, N, walk_length)
 }
@@ -57,6 +62,11 @@ opti_exp <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
 #' @return A numerical matrix describing the requested polytope
 poly_gen <- function(kind_gen, Vpoly_gen, dim_gen, m_gen) {
     .Call(`_volesti_poly_gen`, kind_gen, Vpoly_gen, dim_gen, m_gen)
+}
+
+#' @export
+sdp_approx <- function(d = NULL, num = NULL, optimal_sol = NULL, error = NULL, random_walk = NULL, walk_length = NULL) {
+    .Call(`_volesti_sdp_approx`, d, num, optimal_sol, error, random_walk, walk_length)
 }
 
 #' @export
