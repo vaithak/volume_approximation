@@ -1253,7 +1253,7 @@ void HMC_boltzmann_reflections(Spectrahedron &spectrahedron, Point &p, NT che_ra
 //        }
 
 
-        while (it < 10 * n) {
+        while (it < n) {
 //            Point oo(pVT);
             typedef std::numeric_limits<double> dbl;
 

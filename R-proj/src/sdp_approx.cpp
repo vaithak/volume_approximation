@@ -1,3 +1,4 @@
+
 // [[Rcpp::depends(BH)]]
 
 // VolEsti (volume computation and sampling library)
@@ -229,6 +230,8 @@ int sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
     std::string txt = ".txt";
     std::string sdp = "sdp_prob"+bar+std::to_string(Rcpp::as<int>(d))+bar+std::to_string(Rcpp::as<int>(num))+txt;
 
+    std::cout<<"reading... "<<sdp<<std::endl;
+
     inp.open(sdp,std::ifstream::in);
     lmi Slmi;
     VT c;
@@ -272,6 +275,9 @@ int sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
     //settings2.LMIatP = SP.getLMI().getA0();
     Point cc(c);// = get_direction<RNGType, Point, NT>(n);
 
+    //SP.print();
+    //std::cout<<"n = ="<<n<<" c = "<<c<<std::endl;
+
     //std::filebuf fb;
     //fb.open("sdp_prob.txt", std::ios::out);
     //std::ostream os(&fb);
@@ -279,9 +285,10 @@ int sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
 
     NT T = var.diameter, min_val = 1000.0, temp_val, optimal_solution = Rcpp::as<NT>(optimal_sol);
 
-    NT tred = 1.0 - 1.0/std::sqrt(NT(n));
+    NT tred = 1.0 - 1.0/std::sqrt(NT(n)), min_prev;
+    Point p_prev(n);
 
-    int iterations = 0;
+    int iterations = 0, max_iterations = 600;
     if(Rcpp::as<int>(random_walk)==1) {
 
         std::cout << "HMC"<< std::endl;
@@ -289,13 +296,23 @@ int sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
         std::cout << err<< std::endl;
         std::cout << (std::abs(min_val - optimal_solution) / std::abs(optimal_solution)) << std::endl;
 
-        while ((std::abs(min_val - optimal_solution) / std::abs(optimal_solution)) > err) {
+        while ((std::abs(min_val - optimal_solution) / std::abs(optimal_solution)) > err && iterations <= max_iterations) {
 
             iterations++;
+            p_prev = p;
+            min_prev = min_val;
 
             HMC_boltzmann_reflections(SP, p, diam_spec, var, cc, T, settings2);
             temp_val = c.dot(p.getCoefficients());
             if (temp_val < min_val) min_val = temp_val;
+
+            if (min_val<optimal_solution) {
+                p = p_prev;
+                min_val = min_prev;
+                std::cout<<"Point is oout, repeat"<<std::endl;
+                //iterations--;
+                continue;
+            }
 
             T = T * tred;
 
@@ -304,19 +321,31 @@ int sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
                 std::cout<<"approx_value = "<<min_val<<std::endl;
             }
 
+
         }
     } else {
 
 
         std::cout << "Hit and Run" << std::endl;
       
-        while((std::abs(min_val - optimal_solution) / std::abs(optimal_solution)) > err) {
+        while((std::abs(min_val - optimal_solution) / std::abs(optimal_solution) > err && iterations <= max_iterations) ) {
 
             iterations++;
+            p_prev = p;
+            min_prev = min_val;
+
             for (int j = 0; j < Rcpp::as<unsigned int>(walk_length); ++j) {
                 hit_and_run_Boltzmann_spec(p, SP, var, cc, T);
                 temp_val = (c).dot(p.getCoefficients());
                 if (temp_val < min_val) min_val = temp_val;
+            }
+
+            if (min_val<optimal_solution) {
+                p = p_prev;
+                min_val = min_prev;
+                //iterations--;
+                std::cout<<"Point is oout, repeat"<<std::endl;
+                continue;
             }
 
             T = T * tred;

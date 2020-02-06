@@ -49,9 +49,12 @@ boundcalls_vpoly.data <- data.frame(
  
  #-----------------------only two ratios ----------------------#
  
+ cbp1 <- c("red", "blue", "gold")
+ lt = c("solid", "dotdash")
+ 
  boundcalls_vpoly.data <- data.frame(
    Mean = c(rowMeans(first_bill), rowMeans(first_rdhr), rowMeans(first_cdhr),rowMeans(second_bill), rowMeans(second_rdhr), rowMeans(second_cdhr)),
-   random_walk = c(rep("BW",11), rep("RDHR",11),rep("CDHR",11), rep("BW",11), rep("RDHR",11),rep("CDHR",11)),
+   random_walk = c(rep("W-Billiard",11), rep("W-HNR",11),rep("W-CHNR",11), rep("W-Billiard",11), rep("W-HNR",11),rep("W-CHNR",11)),
    ratio = c(rep("0.0993",11), rep("0.0993",11), rep("0.0993",11), rep("0.588",11), rep("0.588",11), rep("0.588",11)),
    walk_length = rep(c(1,seq(from=5,to=50,by=5)),6)
  )
@@ -60,7 +63,7 @@ boundcalls_vpoly.data <- data.frame(
    geom_line(aes(linetype =ratio, color=random_walk),size=1) + geom_point() +labs(x ="walk length", y=expression(paste("unbiased estimator ", hat(E),"[f]")))  +
    scale_y_continuous(breaks = c(0,0.0993,0.588)) + geom_hline(yintercept=0.0993, linetype="dashed", color = "black", size=0.4) +
    geom_hline(yintercept=0.5880, linetype="dashed", color = "black", size=0.4) +
-   labs(linetype=expression(paste(math(E),"[f]")), color="random walk")+
+   labs(linetype=expression(paste(math(E),"[f]")), color="random walk")+ scale_color_manual(values = cbp1) +scale_linetype_manual(values = lt) +
    theme(legend.position="top",text = element_text(size=30), axis.text.x = element_text(size=20), axis.text.y = element_text(size=20))
  
  
@@ -68,14 +71,14 @@ boundcalls_vpoly.data <- data.frame(
  
  boundcalls_vpoly.data <- data.frame(
    Standard_deviation = c(rowSds(first_bill), rowSds(first_rdhr), rowSds(first_cdhr),rowSds(second_bill), rowSds(second_rdhr), rowSds(second_cdhr)),
-   random_walk = c(rep("BW",11), rep("RDHR",11),rep("CDHR",11), rep("BW",11), rep("RDHR",11),rep("CDHR",11)),
+   random_walk = c(rep("W-Billiard",11), rep("W-HNR",11),rep("W-CHNR",11), rep("W-Billiard",11), rep("W-HNR",11),rep("W-CHNR",11)),
    ratio = c(rep("0.0993",11), rep("0.0993",11), rep("0.0993",11), rep("0.588",11), rep("0.588",11), rep("0.588",11)),
    walk_length = rep(c(1,seq(from=5,to=50,by=5)),6)
  )
  
  ggplot(boundcalls_vpoly.data , aes(x=walk_length, y=Standard_deviation)) +
    geom_line(aes(linetype =ratio, color=random_walk),size=1) + geom_point() +labs(x ="walk length",y=expression(paste("st.d. of unbiased estimator ",hat(E),"[f]")))  +
-   labs(linetype=expression(paste(math(E),"[f]")), color="random walk")+
+   labs(linetype=expression(paste(math(E),"[f]")), color="random walk")+scale_color_manual(values = cbp1) +scale_linetype_manual(values = lt) +
    theme(legend.position="top",text = element_text(size=30), axis.text.x = element_text(size=20), axis.text.y = element_text(size=20))
  
  
