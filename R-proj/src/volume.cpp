@@ -17,23 +17,18 @@
 #include <math.h>
 #include <chrono>
 #include "cartesian_geom/cartesian_kernel.h"
-#include "random.hpp"
-#include "random/uniform_int.hpp"
-#include "random/normal_distribution.hpp"
-#include "random/uniform_real_distribution.hpp"
+#include <random.hpp>
+#include <random/uniform_int.hpp>
+#include <random/normal_distribution.hpp>
+#include <random/uniform_real_distribution.hpp>
 #include "vars.h"
-#include "polytopes.h"
 //#include "ellipsoids.h"
 #include "ballintersectconvex.h"
-#include "vpolyintersectvpoly.h"
 #include "samplers.h"
 #include "rounding.h"
 #include "rotating.h"
-#include "gaussian_samplers.h"
 #include "gaussian_annealing.h"
 //#include "sample_only.h"
-#include "misc.h"
-#include "linear_extensions.h"
 #include "spectrahedron.h"
 //#include "volume.h"
 #include "ball_vol_spec.h"
@@ -219,64 +214,6 @@ void loadSDPAFormatFile2(std::istream &is, LMII &lmi, VT &objectiveFunction) {
     lmi = LMII(matrices);
 }
 
-
-
-template <class Point, class NT, class Polytope>
-double generic_volume(Polytope& P, unsigned int walk_step, double e,
-                      Rcpp::Nullable<Rcpp::NumericVector> InnerBall, bool CG, unsigned int win_len,
-                      unsigned int N, double C, double ratio, double frac,
-                      bool ball_walk, double delta, bool cdhr, bool rdhr, bool rounding)
-{
-    bool rand_only=false,
-         NN=false,
-         birk=false,
-         verbose =false;
-    unsigned int n_threads=1;
-
-    //unsigned int m;//=A.nrow()-1;
-    unsigned int n = P.dimension();//=A.ncol()-1;
-    unsigned int rnum = std::pow(e,-2) * 400 * n * std::log(n);
-
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    // the random engine with this seed
-    typedef boost::mt19937    RNGType;
-    RNGType rng(seed);
-    boost::random::uniform_real_distribution<>(urdist);
-    boost::random::uniform_real_distribution<> urdist1(-1,1);
-
-    std::pair<Point,NT> InnerB;
-
-    if(InnerBall.isNotNull()) { //if it is given as an input
-        // store internal point hat is given as input
-        Rcpp::NumericVector InnerVec = Rcpp::as<Rcpp::NumericVector>(InnerBall);
-        std::vector<NT> temp_p;
-        for (unsigned int j=0; j<n; j++){
-            temp_p.push_back(InnerVec[j]);
-        }
-        InnerB.first = Point( n , temp_p.begin() , temp_p.end() );
-        // store the radius of the internal ball that is given as input
-        InnerB.second = InnerVec[n];
-    } else {
-        // no internal ball or point is given as input
-        InnerB = P.ComputeInnerBall();
-    }
-
-    // initialization
-    vars<NT, RNGType> var(rnum,n,walk_step,n_threads,0.0,e,0,0.0,0, InnerB.second, 0.0, rng,urdist,urdist1,
-                          delta,verbose,rand_only,rounding,NN,birk,ball_walk,cdhr,rdhr, false);
-    NT vol;
-    if (CG) {
-        vars<NT, RNGType> var2(rnum, n, 10 + n / 10, n_threads, 0.0, e, 0, 0.0, 0, InnerB.second, 0.0, rng,
-                               urdist, urdist1, delta, verbose, rand_only, rounding, NN, birk, ball_walk, cdhr,rdhr,false);
-        vars_g<NT, RNGType> var1(n, walk_step, N, win_len, 1, e, InnerB.second, rng, C, frac, ratio, delta, false, verbose,
-                                 rand_only, rounding, NN, birk, ball_walk, cdhr, rdhr);
-        //vol = volume_gaussian_annealing(P, var1, var2, InnerB);
-    } else {
-        //vol = volume(P, var, InnerB);
-    }
-
-     return vol;
-}
 
 //' The main function for volume approximation of a convex Polytope (H-polytope, V-polytope or a zonotope)
 //'

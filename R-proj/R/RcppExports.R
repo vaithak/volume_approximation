@@ -2,53 +2,18 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @export
-control_billiard <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
-    .Call(`_volesti_control_billiard`, nn, mm, N, walk_length)
-}
-
-#' @export
-cotrol_exp <- function(nn = NULL, mm = NULL, N = NULL, M = NULL, walk_length = NULL, walk_type = NULL) {
-    .Call(`_volesti_cotrol_exp`, nn, mm, N, M, walk_length, walk_type)
-}
-
-#' @export
 generator_sdp <- function(nn = NULL, mm = NULL) {
     .Call(`_volesti_generator_sdp`, nn, mm)
 }
 
 #' @export
-opti_hmc <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
-    .Call(`_volesti_opti_hmc`, nn, mm, N, walk_length)
+sample_points <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL, Temperature = NULL, random_walk = NULL) {
+    .Call(`_volesti_sample_points`, nn, mm, N, walk_length, Temperature, random_walk)
 }
 
 #' @export
-opti_exp <- function(nn = NULL, mm = NULL, N = NULL, walk_length = NULL) {
-    .Call(`_volesti_opti_exp`, nn, mm, N, walk_length)
-}
-
-#' An internal Rccp function as a polytope generator
-#'
-#' @param kind_gen An integer to declare the type of the polytope.
-#' @param Vpoly_gen A boolean parameter to declare if the requested polytope has to be in V-representation.
-#' @param dim_gen An integer to declare the dimension of the requested polytope.
-#' @param m_gen An integer to declare the number of generators for the requested random zonotope.
-#'
-#' @section warning:
-#' Do not use this function.
-#'
-#' @return A numerical matrix describing the requested polytope
-poly_gen <- function(kind_gen, Vpoly_gen, dim_gen, m_gen) {
-    .Call(`_volesti_poly_gen`, kind_gen, Vpoly_gen, dim_gen, m_gen)
-}
-
-#' @export
-sdp_approx <- function(d = NULL, num = NULL, optimal_sol = NULL, error = NULL, random_walk = NULL, walk_length = NULL) {
-    .Call(`_volesti_sdp_approx`, d, num, optimal_sol, error, random_walk, walk_length)
-}
-
-#' @export
-spectra_plot <- function(nn = NULL, mm = NULL, N1 = NULL, N2 = NULL, walk_length = NULL) {
-    .Call(`_volesti_spectra_plot`, nn, mm, N1, N2, walk_length)
+sdp_approx <- function(d = NULL, mm = NULL, max_iterations = NULL, random_walk = NULL, walk_length = NULL) {
+    .Call(`_volesti_sdp_approx`, d, mm, max_iterations, random_walk, walk_length)
 }
 
 #' The main function for volume approximation of a convex Polytope (H-polytope, V-polytope or a zonotope)
