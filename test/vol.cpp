@@ -53,7 +53,7 @@ int main(const int argc, const char** argv)
     typedef Zonotope<Point> Zonotope;
     typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
     int n, nexp=1, n_threads=1, W;
-    int walk_len,N, nsam = 100;
+    int walk_len=1,N=100,max_iter=50, nsam = 100;
     NT e=1;
     NT exactvol(-1.0), a=0.5;
     bool verbose=false, 
@@ -72,9 +72,12 @@ int main(const int argc, const char** argv)
          annealing = false,
          Vpoly=false,
          Zono=false,
-         cdhr=true,
+         cdhr=false,
          rdhr=false,
          exact_zono = false,
+         billiard=true,
+         hmc = false,
+            sample_only = false;
          gaussian_sam = false;
 
     //this is our polytope
@@ -143,8 +146,8 @@ int main(const int argc, const char** argv)
           exactvol = atof(argv[++i]);
           correct = true;
       }
-      if(!strcmp(argv[i],"-exact_zono")){
-          exact_zono = true;
+      if(!strcmp(argv[i],"-sample")){
+          sample_only = true;
           correct = true;
       }
       if(!strcmp(argv[i],"-v")||!strcmp(argv[i],"--verbose")){
@@ -157,16 +160,23 @@ int main(const int argc, const char** argv)
           std::cout<<"Generate random points only\n";
           correct = true;
       }
-      if(!strcmp(argv[i],"-rdhr")){
-          cdhr = false;
-          rdhr = true;
-          ball_walk = false;
+      if(!strcmp(argv[i],"-hmc")){
+          hmc = true;
+          billiard = false;
           correct = true;
       }
-      if(!strcmp(argv[i],"-bw")){
-          ball_walk = true;
-          cdhr = false;
-          rdhr = false;
+      if(!strcmp(argv[i],"-rdhr")){
+          rdhr = true;
+          billiard = false;
+          correct = true;
+      }
+      if(!strcmp(argv[i],"-cdhr")){
+          cdhr = true;
+          billiard = false;
+          correct = true;
+      }
+      if(!strcmp(argv[i],"-billiard")){
+          balliard = true;
           correct = true;
       }
       if(!strcmp(argv[i],"-bwr")){
@@ -187,11 +197,11 @@ int main(const int argc, const char** argv)
           frac = atof(argv[++i]);
           correct = true;
       }
-      if(!strcmp(argv[i],"-C")){
-          C = atof(argv[++i]);
+      if(!strcmp(argv[i],"-max_iter")){
+          max_iter = atof(argv[++i]);
           correct = true;
       }
-      if(!strcmp(argv[i],"-N_an")){
+      if(!strcmp(argv[i],"-N")){
           N = atof(argv[++i]);
           user_N = true;
           correct = true;
@@ -210,49 +220,18 @@ int main(const int argc, const char** argv)
           correct = true;
       }
       //reading from file
-      if(!strcmp(argv[i],"-f1")||!strcmp(argv[i],"--file1")){
-          file = true;
-          std::cout<<"Reading input from file..."<<std::endl;
+      if(!strcmp(argv[i],"-file")){
           std::ifstream inp;
-          std::vector<std::vector<NT> > Pin;
+
+
+          std::cout<<"reading spactrahedra... "<<sdp<<std::endl;
+
           inp.open(argv[++i],std::ifstream::in);
-          read_pointset(inp,Pin);
-          n = Pin[0][1]-1;
-          HP.init(Pin);
-          if (verbose && HP.num_of_hyperplanes()<100){
-              std::cout<<"Input polytope: "<<n<<std::endl;
-              HP.print();
-          }
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-f2")||!strcmp(argv[i],"--file2")){
-          file = true;
-          Vpoly = true;
-          std::cout<<"Reading input from file..."<<std::endl;
-          std::ifstream inp;
-          std::vector<std::vector<NT> > Pin;
-          inp.open(argv[++i],std::ifstream::in);
-          read_pointset(inp,Pin);
-          //std::cout<<"d="<<Pin[0][1]<<std::endl;
-          n = Pin[0][1]-1;
-          VP.init(Pin);
-          if (verbose && VP.num_of_vertices()<100){
-              std::cout<<"Input polytope: "<<n<<std::endl;
-              VP.print();
-          }
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-f3")||!strcmp(argv[i],"--file3")){
-          file = true;
-          Zono = true;
-          std::cout<<"Reading input from file..."<<std::endl;
-          std::ifstream inp;
-          std::vector<std::vector<NT> > Pin;
-          inp.open(argv[++i],std::ifstream::in);
-          read_pointset(inp,Pin);
-          //std::cout<<"d="<<Pin[0][1]<<std::endl;
-          n = Pin[0][1]-1;
-          ZP.init(Pin);
+          lmi Slmi;
+          VT c;
+          loadSDPAFormatFile3<MT>(inp, Slmi, c);
+          spectaedro SP(Slmi);//, SP2;
+          unsigned int n = SP.dimension();
           correct = true;
       }
       /*
@@ -275,24 +254,6 @@ int main(const int argc, const char** argv)
     }
 */
       //reading linear extensions and order polytopes
-      if(!strcmp(argv[i],"-fle")||!strcmp(argv[i],"--filele")){
-          file = true;
-          std::cout<<"Reading input from file..."<<std::endl;
-          std::ifstream inp;
-          inp.open(argv[++i],std::ifstream::in);
-          std::ofstream os ("order_polytope.ine",std::ofstream::out);
-          linear_extensions_to_order_polytope(inp,os);
-
-          std::ifstream inp2;
-          inp2.open("order_polytope.ine",std::ifstream::in);
-          std::vector<std::vector<NT> > Pin;
-          read_pointset(inp2,Pin);
-          n = Pin[0][1]-1;
-          HP.init(Pin);
-          std::cout<<"Input polytope: "<<n<<std::endl;
-          linear_extensions = true;
-          correct = true;
-      }
       if(!strcmp(argv[i],"-r")||!strcmp(argv[i],"--round")){
           round = true;
           correct = true;
