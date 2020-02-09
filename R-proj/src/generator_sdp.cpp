@@ -28,8 +28,7 @@
 //' @export
 // [[Rcpp::export]]
 double generator_sdp(Rcpp::Nullable<int> nn = R_NilValue,
-                             Rcpp::Nullable<int> mm = R_NilValue,
-                    Rcpp::Nullable<int> num = R_NilValue) {
+                             Rcpp::Nullable<int> mm = R_NilValue) {
 
     typedef double NT;
     typedef Eigen::Matrix<NT, Eigen::Dynamic, 1> VT;
@@ -47,37 +46,37 @@ double generator_sdp(Rcpp::Nullable<int> nn = R_NilValue,
 
     //SP2 = SP;
 
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    //unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     // the random engine with this seed
-    typedef boost::mt19937 RNGType;
-    RNGType rng(seed);
-    boost::random::uniform_real_distribution<>(urdist);
-    boost::random::uniform_real_distribution<> urdist1(-1, 1);
-    boost::random::uniform_int_distribution<> uidist(0, n - 1);
+    //typedef boost::mt19937 RNGType;
+    //RNGType rng(seed);
+    //boost::random::uniform_real_distribution<>(urdist);
+    //boost::random::uniform_real_distribution<> urdist1(-1, 1);
+    //boost::random::uniform_int_distribution<> uidist(0, n - 1);
 
-    bool round = false;
-    std::pair <Point, NT> InnerB;
-    Point p(Rcpp::as<int>(nn));
-    NT nballs2, diam_spec, vol_spec, rad, round_value = 1.0;
-    InnerB.first = p;// = SP.ComputeInnerBall(diam_spec);
+    //bool round = false;
+    //std::pair <Point, NT> InnerB;
+    //Point p(Rcpp::as<int>(nn));
+    //NT nballs2, diam_spec, vol_spec, rad, round_value = 1.0;
+    //InnerB.first = p;// = SP.ComputeInnerBall(diam_spec);
 
-    vars <NT, RNGType> var(0, Rcpp::as<int>(nn), 1, 1, 0.0, 0.1, 0, 0.0, 0, InnerB.second, diam_spec, rng, urdist,
-                           urdist1,
-                           -1.0, true, false, round, false, false, false, false, false, true);
+    //vars <NT, RNGType> var(0, Rcpp::as<int>(nn), 1, 1, 0.0, 0.1, 0, 0.0, 0, InnerB.second, diam_spec, rng, urdist,
+                           //urdist1,
+                           //-1.0, true, false, round, false, false, false, false, false, true);
 
-    std::list <Point> randPoints, randPoints2;
-    spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
-    settings.LMIatP = SP.getLMI().getA0();
-    preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
-    settings.LMIatP = SP.getLMI().getA0();
-    p = Point(n);
+    //std::list <Point> randPoints, randPoints2;
+    //spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+    //settings.LMIatP = SP.getLMI().getA0();
+    //preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
+    //settings.LMIatP = SP.getLMI().getA0();
+    //p = Point(n);
 
     Point c = get_direction<RNGType, Point, NT>(n);
 
     std::filebuf fb;
     std::string bar = "_";
     std::string txt = ".txt";
-    fb.open("sdp_prob"+bar+std::to_string(n)+bar+std::to_string(Rcpp::as<int>(num))+txt, std::ios::out);
+    fb.open("sdp_prob"+bar+std::to_string(n)+bar+std::to_string(Rcpp::as<int>(mm))+txt, std::ios::out);
     std::ostream os(&fb);
     writeSDPAFormatFile<MT>(os, SP.getLMI(), c.get_coefficients());
 
