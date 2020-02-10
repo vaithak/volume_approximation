@@ -119,9 +119,9 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
     boost::numeric::ublas::matrix<double> Ap(n, 10 * n);
     NT max_diam = 0.0, diam_iter, ratio1 = 0.0;
 
-    std::cout<<"computing enclosed ball.."<<std::endl;
+    //std::cout<<"computing enclosed ball.."<<std::endl;
     SP.ComputeInnerBall(diam, radius);
-    std::cout<<"enclosed ball computed.."<<std::endl;
+    //std::cout<<"enclosed ball computed.."<<std::endl;
     var.diameter = diam;
     var.che_rad = radius;
 
@@ -132,9 +132,9 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
         count++;
 
         randPoints.clear();
-        std::cout<<"Sampling 10d points from P.."<<std::endl;
+        //std::cout<<"Sampling 10d points from P.."<<std::endl;
         rand_point_generator_spec(SP, p, 10 * n, 1, randPoints, var, settings);
-        std::cout<<"points sampled.."<<std::endl;
+        //std::cout<<"points sampled.."<<std::endl;
         //boundary_rand_point_generator(P, p, 50*n, walk_len, randPoints, var);
 
         typename std::list<Point>::iterator rpit = randPoints.begin();
@@ -191,7 +191,7 @@ void preproccess_spectrahedron(Spectrahedron &SP, Point &p, Parameters &var, Spe
     SP.ComputeInnerBall(diam, radius);
     var.che_rad = radius;
     var.diameter = diam;
-    std::cout<<"preproccess completed.."<<std::endl;
+    //std::cout<<"preproccess completed.."<<std::endl;
 
 }
 

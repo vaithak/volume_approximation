@@ -22,9 +22,32 @@
 #include "Eigen/Eigen"
 #define VOLESTI_DEBUG
 #include <fstream>
-#include "volume.h"
-#include "sample_only.h"
-#include "exact_vols.h"
+#include <iterator>
+//#include <fstream>
+#include <vector>
+#include <list>
+//#include <algorithm>
+#include <math.h>
+#include <chrono>
+#include "cartesian_geom/cartesian_kernel.h"
+#include "random.hpp"
+#include "random/uniform_int.hpp"
+#include "random/normal_distribution.hpp"
+#include "random/uniform_real_distribution.hpp"
+#include "vars.h"
+//#include "ellipsoids.h"
+#include "ballintersectconvex.h"
+#include "samplers.h"
+#include "rounding.h"
+#include "rotating.h"
+#include "gaussian_annealing.h"
+//#include "sample_only.h"
+#include "spectrahedron.h"
+//#include "volume.h"
+#include "ball_vol_spec.h"
+//#include "sdp_generator.h"
+//#include "sample_only.h"
+//#include "exact_vols.h"
 
 //////////////////////////////////////////////////////////
 /**** MAIN *****/
@@ -36,6 +59,185 @@ FT factorial(FT n)
   return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
 
+
+typedef std::string::iterator string_it3;
+typedef std::list<double> listVector3;
+
+
+char consumeSymbol3(string_it3 &at, string_it3 &end) {
+    while (at != end) {
+        if (*at != ' ' && *at != '\t') {
+            char c = *at;
+            at++;
+            return c;
+        }
+
+        at++;
+    }
+
+    return '\0';
+}
+
+
+bool isCommentLine3(std::string &line) {
+    string_it3 at = line.begin();
+    string_it3 end = line.end();
+
+    char c = consumeSymbol3(at, end);
+
+    return c == '"' || c == '*';
+}
+
+
+int fetchNumber3(std::string &string) {
+    std::stringstream stream(string);
+    int num;
+    stream >> num;
+    return num;
+}
+
+
+/**
+ * Read a vector of the form {val1, val2, ..., valn}
+ * @param string
+ * @return
+ */
+listVector3 readVector3(std::string &string) {
+    std::stringstream stream(string);
+    listVector3 vector;
+    double value;
+
+    while (stream >> value) {
+        vector.push_back(value);
+    }
+
+    return vector;
+}
+
+
+template <typename MT, typename LMII, typename VT>
+void loadSDPAFormatFile3(std::istream &is, LMII &lmi, VT &objectiveFunction) {
+    std::string line;
+    std::string::size_type sz;
+
+    std::getline(is, line, '\n');
+
+    //skip comments
+    while (isCommentLine3(line)) {
+        std::getline(is, line, '\n');
+    }
+
+    //read variables number
+    int variablesNum = fetchNumber3(line);
+
+    if (std::getline(is, line, '\n').eof())
+        throw 1;
+
+    //read number of blocks
+    int blocksNum = fetchNumber3(line);
+
+    if (std::getline(is, line, '\n').eof())
+        throw 1;
+
+    //read block structure vector
+    listVector3 blockStructure = readVector3(line); //TODO different if we have one block
+
+    if (blockStructure.size() != blocksNum)
+        throw 1;
+
+    if (std::getline(is, line, '\n').eof())
+        throw 1;
+
+    //read constant vector
+    listVector3 constantVector = readVector3(line);
+
+    while  (constantVector.size() < variablesNum) {
+        if (std::getline(is, line, '\n').eof())
+            throw 1;
+        listVector3 t = readVector3(line);
+        constantVector.insert(std::end(constantVector), std::begin(t), std::end(t));
+    }
+
+//        for (auto x : constantVector)
+//            std::cout << x << "  ";
+//        std::cout << "\n";
+//            throw 1;
+
+
+    std::vector<MT> matrices(variablesNum + 1);
+    int matrixDim = 0;
+    for (auto x : blockStructure)
+        matrixDim += std::abs((int) x);
+
+    //read constraint matrices
+    for (int atMatrix = 0; atMatrix < matrices.size(); atMatrix++) {
+        MT matrix;
+        matrix.setZero(matrixDim, matrixDim);
+
+        int offset = 0;
+
+        for (auto blockSize : blockStructure) {
+
+            if (blockSize > 0) { //read a block blockSize x blockSize
+                int at = 0;
+                int i = 0, j = 0;
+
+                while (at < blockSize * blockSize) {
+                    if (std::getline(is, line, '\n').eof())
+                        throw 1;
+
+                    listVector3 vec = readVector3(line);
+
+                    for (double value : vec) {
+                        matrix(offset + i, offset + j) = value;
+//                            std::cout <<value << " val\n";
+                        at++;
+                        if (at % (int) blockSize == 0) { // new row
+                            i++;
+                            j = 0;
+                        } else { //new column
+                            j++;
+                        }
+                    }
+                } /* while (at<blockSize*blockSize) */
+
+            } else { //read diagonal block
+                blockSize = std::abs(blockSize);
+                int at = 0;
+
+                while (at < blockSize) {
+                    if (std::getline(is, line, '\n').eof())
+                        throw 1;
+
+                    listVector3 vec = readVector3(line);
+
+                    for (double value : vec) {
+                        matrix(offset + at, offset + at) = value;
+                        at++;
+                    }
+                } /* while (at<blockSize) */
+            }
+
+            offset += std::abs(blockSize);
+        } /* for (auto blockSize : blockStructure) */
+
+        //the LMI in SDPA format is >0, I want it <0
+        if (atMatrix == 0) //F0 has - before it in SDPA format, the rest have +
+            matrices[atMatrix] = matrix;
+        else
+            matrices[atMatrix] = -1 * matrix;
+    }
+
+    // return lmi and objective function
+    objectiveFunction.setZero(variablesNum);
+    int at = 0;
+
+    for (auto value : constantVector)
+        objectiveFunction(at++) = value;
+
+    lmi = LMII(matrices);
+}
+
 // Approximating the volume of a convex polytope or body 
 // can also be used for integration of concave functions.
 // The user should provide the appropriate membership 
@@ -44,18 +246,20 @@ FT factorial(FT n)
 int main(const int argc, const char** argv)
 {
 	//Deafault values
-    typedef double                    NT;
-    typedef Cartesian<NT>             Kernel;
-    typedef typename Kernel::Point    Point;
-    typedef boost::mt19937            RNGType;
-    typedef HPolytope<Point> Hpolytope;
-    typedef VPolytope<Point, RNGType > Vpolytope;
-    typedef Zonotope<Point> Zonotope;
-    typedef Eigen::Matrix<NT,Eigen::Dynamic,Eigen::Dynamic> MT;
+    typedef double NT;
+    typedef Eigen::Matrix<NT, Eigen::Dynamic, 1> VT;
+    typedef Eigen::Matrix <NT, Eigen::Dynamic, Eigen::Dynamic> MT;
+    typedef Cartesian <NT, NT, VT> Kernel;
+    typedef typename Kernel::Point Point;
+    typedef boost::mt19937 RNGType;
+    typedef LMI <MT, VT> lmi;
+    typedef Spectrahedron <lmi, Point> spectaedro;
+
     int n, nexp=1, n_threads=1, W;
-    int walk_len=1,N=100,max_iter=50, nsam = 100;
+    int walk_len=1,N=100,max_iter=20, nsam = 100;
     NT e=1;
     NT exactvol(-1.0), a=0.5;
+    VT c;
     bool verbose=false, 
 	 rand_only=false, 
 	 round_only=false,
@@ -76,18 +280,20 @@ int main(const int argc, const char** argv)
          rdhr=false,
          exact_zono = false,
          billiard=true,
-         hmc = false,
-            sample_only = false;
+         hmc = true,
+            sample_only = false,
+            sdp=false,
          gaussian_sam = false;
+    spectaedro SP;
 
     //this is our polytope
-    Hpolytope HP;
-    Vpolytope VP; // RNGType only needed for the construction of the inner ball which needs randomization
-    Zonotope  ZP;
+    //Hpolytope HP;
+    //Vpolytope VP; // RNGType only needed for the construction of the inner ball which needs randomization
+    //Zonotope  ZP;
 
     // parameters of CV algorithm
     bool user_W=false, user_N=false, user_ratio=false;
-    NT ball_radius=0.0;
+    NT ball_radius=0.0, T = 1.0;
     NT C=2.0,ratio,frac=0.1,delta=-1.0,error=0.2;
 
   if(argc<2){
@@ -138,26 +344,9 @@ int main(const int argc, const char** argv)
                       std::endl;
           return 0;
       }
-      if(!strcmp(argv[i],"--cube")){
-          exactvol = std::pow(2,n);
-          correct = true;
-      }
-      if(!strcmp(argv[i],"--exact")){
-          exactvol = atof(argv[++i]);
-          correct = true;
-      }
+
       if(!strcmp(argv[i],"-sample")){
           sample_only = true;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-v")||!strcmp(argv[i],"--verbose")){
-          verbose = true;
-          std::cout<<"Verbose mode\n";
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-rand")||!strcmp(argv[i],"--rand_only")){
-          rand_only = true;
-          std::cout<<"Generate random points only\n";
           correct = true;
       }
       if(!strcmp(argv[i],"-hmc")){
@@ -167,6 +356,7 @@ int main(const int argc, const char** argv)
       }
       if(!strcmp(argv[i],"-rdhr")){
           rdhr = true;
+          hmc=false;
           billiard = false;
           correct = true;
       }
@@ -176,47 +366,28 @@ int main(const int argc, const char** argv)
           correct = true;
       }
       if(!strcmp(argv[i],"-billiard")){
-          balliard = true;
+          billiard = true;
           correct = true;
       }
-      if(!strcmp(argv[i],"-bwr")){
-          delta = atof(argv[++i]);
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-Win")){
-          W = atof(argv[++i]);
-          user_W = true;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-ratio")){
-          ratio = atof(argv[++i]);
-          user_ratio = true;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-frac")){
-          frac = atof(argv[++i]);
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-max_iter")){
-          max_iter = atof(argv[++i]);
-          correct = true;
-      }
+
+
+      //if(!strcmp(argv[i],"-max_iter")){
+          //max_iter = atof(argv[++i]);
+          //correct = true;
+      //}
       if(!strcmp(argv[i],"-N")){
           N = atof(argv[++i]);
+          max_iter = N;
           user_N = true;
           correct = true;
       }
-      if(!strcmp(argv[i],"-nsample")){
-          nsam = atof(argv[++i]);
+      if(!strcmp(argv[i],"-temperature")){
+          T = atof(argv[++i]);
           correct = true;
       }
-      if(!strcmp(argv[i],"-gaussian")){
-          gaussian_sam = true;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-variance")){
-          a = atof(argv[++i]);
-          a = 1.0 / (2.0 * a);
+
+      if(!strcmp(argv[i],"-sdp")){
+          sdp = true;
           correct = true;
       }
       //reading from file
@@ -224,80 +395,26 @@ int main(const int argc, const char** argv)
           std::ifstream inp;
 
 
-          std::cout<<"reading spactrahedra... "<<sdp<<std::endl;
+          //std::cout<<"reading spactrahedra... "<<std::endl;
 
           inp.open(argv[++i],std::ifstream::in);
           lmi Slmi;
-          VT c;
+
           loadSDPAFormatFile3<MT>(inp, Slmi, c);
-          spectaedro SP(Slmi);//, SP2;
-          unsigned int n = SP.dimension();
+          spectaedro SP2(Slmi);//, SP2;
+          n = SP2.dimension();
+          SP = SP2;
           correct = true;
       }
-      /*
-    if(!strcmp(argv[i],"-f2")||!strcmp(argv[i],"--file2")){
-            file=true;
-      std::ifstream inp;
-      std::vector<std::vector<double> > Pin;
-      inp.open(argv[++i],std::ifstream::in);
-      read_pointset(inp,Pin);
-      //std::cout<<"d="<<Pin[0][1]<<std::endl;
-      //n = Pin[0][1]-1;
-      P.init(Pin);
-      P.rref();
-      n=P.dimension();
-      //if (verbose && P.num_of_hyperplanes()<1000){
-    // std::cout<<"Input polytope: "<<n<<std::endl;
-      //  P.print();
-      //}
-      correct=true;
-    }
-*/
+
       //reading linear extensions and order polytopes
-      if(!strcmp(argv[i],"-r")||!strcmp(argv[i],"--round")){
-          round = true;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-e")||!strcmp(argv[i],"--error")){
-          e = atof(argv[++i]);
-          error = e;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-w")||!strcmp(argv[i],"--walk_len")){
+
+      if(!strcmp(argv[i],"-w")||!strcmp(argv[i],"-walk_length")){
           walk_len = atof(argv[++i]);
           user_walk_len = true;
           correct = true;
       }
-      if(!strcmp(argv[i],"-exp")){
-          nexp = atof(argv[++i]);
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-t")||!strcmp(argv[i],"--threads")){
-          n_threads = atof(argv[++i]);
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-NN")){
-          std::cout<<"flann software is needed for this option. Experimental feature."
-                  <<"Currently under development."<<std::endl;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-ro")){
-          round_only = true;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-birk_sym")){
-          birk = true;
-          correct = true;
-      }
-      //rotate the polytope randomly
-      if(!strcmp(argv[i],"-rot")){
-          rotate = true;
-          correct = true;
-      }
-      if(!strcmp(argv[i],"-cg")){
-          annealing = true;
-          correct = true;
-      }
+
       if(correct==false){
           std::cerr<<"unknown parameters \'"<<argv[i]<<
                      "\', try "<<argv[0]<<" --help"<<std::endl;
@@ -306,301 +423,199 @@ int main(const int argc, const char** argv)
       
   }
 
-  if (exact_zono) {
-      NT vol_ex = exact_zonotope_vol<NT>(ZP);
-      std::cout<<"Zonotope's exact volume = "<<vol_ex<<std::endl;
-      return 0;
-  }
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    typedef boost::mt19937    RNGType;
+    RNGType rng(seed);
+    boost::random::uniform_real_distribution<>(urdist);
+    boost::random::uniform_real_distribution<> urdist1(-1,1);
+    boost::random::uniform_int_distribution<> uidist(0, n - 1);
 
-  //Compute chebychev ball//
-  std::pair<Point, NT> InnerBall;
-  double tstart1 = (double)clock()/(double)CLOCKS_PER_SEC;
-  if (Zono) {
-      InnerBall = ZP.ComputeInnerBall();
-  } else if(!Vpoly) {
-      InnerBall = HP.ComputeInnerBall();
-  }else{
-      InnerBall = VP.ComputeInnerBall();
-  }
-  double tstop1 = (double)clock()/(double)CLOCKS_PER_SEC;
-  if(verbose) std::cout << "Inner ball time: " << tstop1 - tstart1 << std::endl;
-  if(verbose){
-      std::cout<<"Inner ball center is: "<<std::endl;
-      for(unsigned int i=0; i<n; i++){
-          std::cout<<InnerBall.first[i]<<" ";
-      }
-      std::cout<<"\nradius is: "<<InnerBall.second<<std::endl;
-  }
-  
-  // Set the number of random walk steps
+  if(!sample_only && !sdp) {
+      //cdhr = true; rdhr = false; ball_walk = false; round=false;
+      //int win_len = 4*n*n+500;
+      //N = 500 * 2 +  n * n / 2;
 
-  if(!user_walk_len) {
-      if(!annealing) {
-          walk_len = 10 + n / 10;
-      }else{
-          walk_len = 1;
-      }
-  }
-  if(!user_N)
-      N = 500 * ((int) C) + ((int) (n * n / 2));
-  if(!user_ratio)
-      ratio = 1.0-1.0/(NT(n));
-  if(!user_W)
-      W = 4*n*n+500;
+      //C = 2.0, ratio = 1.0-1.0/(NT(n)), frac = 0.1, e, delta = -1.0;
+
+      vars_ban <NT> var_ban(0.05, 0.1, 0.75, 0.0, 0.2, 150, 125, 10, false);
+      std::pair<Point,NT> InnerB;
+      Point p(n);
+      NT nballs2, diam_spec, vol_spec, rad, round_value = 1.0;
+      InnerB.first = p;// = SP.ComputeInnerBall(diam_spec);
+
+      vars<NT, RNGType> var(0,n, 1, 1,0.0,0.1,0,0.0,0, InnerB.second,diam_spec,rng,urdist,urdist1,
+                            delta,true,false,round,false,false,false,false,false, true);
+      spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+      settings.LMIatP = SP.getLMI().getA0();
+
+      //std::cout<<"\ninitializations ok.."<<std::endl;
+      preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
+      //std::cout<<"preproccessing ok.."<<std::endl;
+      InnerB.second = rad;
+
+      vol_spec = volesti_ball_ann(SP, var, var_ban, settings, InnerB, nballs2, false);
+
+      std::cout<<"volume = "<<vol_spec<<std::endl;
+      return -1.0;
+  } else if(sample_only) {
+      Point p(n);
+      std::list<Point> randPoints;
+      NT nballs2, diam_spec, vol_spec, rad, round_value = 1.0, diam, radius;
+      bool round = false;
+
+      SP.ComputeInnerBall(diam, radius);
+
+      std::pair<Point,NT> InnerB;
+      InnerB.first = p;
+
+      vars<NT, RNGType> var(0,n, 1, 1,0.0,0.1,0,0.0,0, radius,diam,rng,urdist,urdist1,
+                            -1.0,true,false,round,false,false,false,false,false, true);
+      var.che_rad = radius;
+      var.diameter = diam;
+
+      if(billiard){
 
 
-  // Timings
-  double tstart, tstop;
+          spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+          settings.LMIatP = SP.getLMI().getA0();
+          p = Point(n);
 
-  /* CONSTANTS */
-  //error in hit-and-run bisection of P 
-  const NT err=0.0000000001;
-  const NT err_opt=0.01;
+          rand_point_generator_spec(SP, p,N, walk_len, randPoints, var, settings);
 
-  //bounds for the cube	
-  const int lw=0, up=10000, R=up-lw;
-  
-   /* RANDOM NUMBERS */
-  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  RNGType rng(seed);
-  boost::normal_distribution<> rdist(0,1);
-  boost::random::uniform_real_distribution<>(urdist);
-  boost::random::uniform_real_distribution<> urdist1(-1,1);
-
-  // If no file specified construct a default polytope
-  if(!file){
-      HP.init(n);
-  }
-
-  // If rotate flag is on rotate the polytope
-  if(rotate) {
-      if (Zono) {
-          rotating<MT>(ZP);
-          std::cout << "\n--------------\nRotated Zonotope\n" << std::endl;
-          ZP.print();
-      } else if (!Vpoly) {
-          rotating<MT>(HP);
-          std::cout << "\n--------------\nRotated polytope\nH-representation\nbegin\n" << std::endl;
-          HP.print();
-      } else {
-          rotating<MT>(VP);
-          std::cout << "\n--------------\nRotated polytope\nV-representation\nbegin\n" << std::endl;
-          VP.print();
-      }
-      return 0;
-  }
-  if (rand_only) {
-      std::list <Point> randPoints;
-      if (ball_walk) {
-          if (delta < 0.0) { // set the radius for the ball walk if is not set by the user
-              if (gaussian_sam) {
-                  delta = 4.0 * InnerBall.second / std::sqrt(std::max(NT(1.0), a) * NT(n));
-              } else {
-                  delta = 4.0 * InnerBall.second / std::sqrt(NT(n));
+      } else if (hmc) {
+          spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
+          settings2.first = true;
+          settings2.epsilon = 0.0001;
+          Point cc(c);
+          p = Point(n);
+          for (int i = 0; i < N; ++i) {
+              for (int j = 0; j < walk_len; ++j) {
+                  HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
               }
+              randPoints.push_back(p);
           }
-      }
-      vars<NT, RNGType> var1(0, n, walk_len, 1, 0, 0, 0, 0.0, 0, InnerBall.second, rng,
-                urdist, urdist1, delta, verbose, rand_only, round, NN, birk, ball_walk, cdhr, rdhr);
-      vars_g<NT, RNGType> var2(n, walk_len, N, W, 1, 0, InnerBall.second, rng, C, frac, ratio, delta,
-                  false, verbose, rand_only, round, NN, birk, ball_walk, cdhr, rdhr);
-
-      double tstart11 = (double)clock()/(double)CLOCKS_PER_SEC;
-      if (Zono) {
-          sampling_only<Point>(randPoints, ZP, walk_len, nsam, gaussian_sam, a, InnerBall.first, var1, var2);
-      } else if (!Vpoly) {
-          sampling_only<Point>(randPoints, HP, walk_len, nsam, gaussian_sam, a, InnerBall.first, var1, var2);
-      } else {
-          sampling_only<Point>(randPoints, VP, walk_len, nsam, gaussian_sam, a, InnerBall.first, var1, var2);
-      }
-      double tstop11 = (double)clock()/(double)CLOCKS_PER_SEC;
-      if(verbose) std::cout << "Sampling time: " << tstop11 - tstart11 << std::endl;
-      return 0;
-  }
-
-  // the number of random points to be generated in each K_i
-  int rnum = std::pow(e,-2) * 400 * n * std::log(n);
-  
-  //RUN EXPERIMENTS
-  int num_of_exp=nexp;
-  double sum_time=0;
-  NT min,max,sum=0;
-  std::vector<NT> vs;
-  NT average, std_dev;
-  double Chebtime, sum_Chebtime=double(0);
-  NT vol;
-  
-  for(unsigned int i=0; i<num_of_exp; ++i){
-      std::cout<<"Experiment "<<i+1<<" ";
-      tstart = (double)clock()/(double)CLOCKS_PER_SEC;
-
-      // Setup the parameters
-      vars<NT, RNGType> var(rnum,n,walk_len,n_threads,err,e,0,0.0,0,InnerBall.second,rng,
-               urdist,urdist1,delta,verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr);
-
-      if(round_only) {
-          // Round the polytope and exit
-          std::pair <NT, NT> res_round;
-          if (Zono){
-              res_round = rounding_min_ellipsoid(ZP, InnerBall, var);
-              std::cout << "\n--------------\nRounded Zonotpe\n" << std::endl;
-              ZP.print();
-          } else if (!Vpoly) {
-              res_round = rounding_min_ellipsoid(HP, InnerBall, var);
-              std::cout << "\n--------------\nRounded polytope\nH-representation\nbegin\n" << std::endl;
-              HP.print();
-          } else {
-              res_round = rounding_min_ellipsoid(VP, InnerBall, var);
-              std::cout << "\n--------------\nRounded polytope\nV-representation\nbegin\n" << std::endl;
-              VP.print();
+      }else if (rdhr) {
+          p = Point(n);
+          for (int j = 0; j < N; ++j) {
+              for (int k = 0; k < walk_len; ++k) {
+                  hit_and_run_spec(p, SP, var);
+              }
+              randPoints.push_back(p);
           }
-          std::cout << "end\n--------------\n" << std::endl;
-          return 0;
-      } else {
-          // Estimate the volume
-          if (annealing) {
-
-              // setup the parameters
-              vars<NT, RNGType> var2(rnum,n,10 + n/10,n_threads,err,e,0,0.0,0,InnerBall.second,rng,
-                       urdist,urdist1,delta,verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr);
-
-              vars_g<NT, RNGType> var1(n,walk_len,N,W,1,error,InnerBall.second,rng,C,frac,ratio,delta,false,
-                          verbose,rand_only,round,NN,birk,ball_walk,cdhr,rdhr);
-
-              if (Zono) {
-                  vol = volume_gaussian_annealing(ZP, var1, var2, InnerBall);
-              } else if (!Vpoly) {
-                  vol = volume_gaussian_annealing(HP, var1, var2, InnerBall);
-              } else {
-                  vol = volume_gaussian_annealing(VP, var1, var2, InnerBall);
+      }else if (cdhr) {
+          Point v(n);
+          p = Point(n);
+          int rand_coord;
+          for (int j = 0; j < NN; ++j) {
+              for (int k = 0; k < walk_len; ++k) {
+                  v = Point(n);
+                  rand_coord = uidist(rng);
+                  v.set_coord(rand_coord, 1.0);//(rand_coord) = 1.0;
+                  std::pair<NT, NT> dbpair = SP.boundaryOracle(p.get_coefficients(), v.get_coefficients());
+                  double min_plus = dbpair.first;
+                  double max_minus = dbpair.second;
+                  Point b1 = (min_plus * v) + p;
+                  Point b2 = (max_minus * v) + p;
+                  double lambda = urdist(rng);
+                  p = (lambda * b1);
+                  p = ((1 - lambda) * b2) + p;
               }
-
-          } else {
-              if (Zono) {
-                  vol = volume(ZP, var, InnerBall);
-              } else if (!Vpoly) {
-                  vol = volume(HP, var, InnerBall);
-              } else {
-                  vol = volume(VP, var, InnerBall);
-              }
+              randPoints.push_back(p);
           }
       }
 
-      NT v1 = vol;
-
-      tstop = (double)clock()/(double)CLOCKS_PER_SEC;
-
-      // Statistics
-      sum+=v1;
-      if(i==0){max=v1;min=v1;}
-      if(v1>max) max=v1;
-      if(v1<min) min=v1;
-      vs.push_back(v1);
-      sum_time +=  tstop-tstart;
-      sum_Chebtime += Chebtime;
-
-      if(round)
-          std::cout<<" (rounding is ON)";
-      std::cout<<std::endl;
-
-      //Compute Statistics
-      average=sum/(i+1);
-      std_dev=0;
-      for(std::vector<NT>::iterator vit=vs.begin(); vit!=vs.end(); ++vit){
-          std_dev += std::pow(*vit - average,2);
+      for (typename std::list<Point>::iterator rpit = randPoints.begin(); rpit!=randPoints.end(); rpit++) {
+          (*rpit).print();
       }
-      std_dev = std::sqrt(std_dev/(i+1));
 
-      std::cout.precision(7);
+  } else {
+      bool round = false;
+      //std::pair <Point, NT> InnerB;
+      Point p(n);
+      NT nballs2, diam, vol_spec, radius, round_value = 1.0;
+      SP.ComputeInnerBall(diam, radius);
 
-      //MEMORY USAGE
-      //struct proc_t usage;
-      //look_up_our_self(&usage);
+      std::pair<Point,NT> InnerB;
+      InnerB.first = p;
 
-      //Print statistics
-      //std::cout<<"\nSTATISTICS:"<<std::endl;
-      if (!experiments){
-          std::cout
-                  <<"Dimension= "
-                  <<n<<" "
-                   //<<argv[]<<" "
-                  <<"\nNumber of hyperplanes= "
-                  <<HP.num_of_hyperplanes()<<" "
-                  <<"\nNumber of runs= "
-                  <<num_of_exp<<" "
-                  <<"\nError parameter= "
-                  <<e
-                  <<"\nTheoretical range of values= "<<" ["
-                  <<(1-e)*exactvol<<","
-                  <<(1+e)*exactvol<<"] "
-                  <<"\nNumber of random points generated in each iteration= "
-                  <<rnum<<" "
-                  <<"\nRandom walk length= "
-                  <<walk_len<<" "
-                  <<"\nAverage volume (avg)= "
-                  <<average
-                  <<"\nmin,max= "
-                    " ["
-                  <<min<<","
-                  <<max<<"] "
-                  <<"\nStandard deviation= "
-                  <<std_dev<<" "
-                  <<"\n(max-min)/avg= "
-                  <<(max-min)/average<<" "
-                  <<"\nTime(sec)= "
-                  <<sum_time/(i+1)<<" "
-                  <<"\nTime(sec) Chebyshev= "
-                  <<sum_Chebtime/(i+1)<<" "
-                    //<<usage.vsize
-                  <<std::endl;
-    
-      if(exactvol!=-1.0){
-	      std::cout 
-	           <<"\nExact volume= "
-	           <<exactvol<<" "
-	           <<"\n(vol-avg)/vol= "
-	           <<(exactvol-average)/exactvol<<" "
-               <<std::endl;
+      vars<NT, RNGType> var(0,n, 1, 1,0.0,0.1,0,0.0,0, radius,diam,rng,urdist,urdist1,
+                            -1.0,true,false,round,false,false,false,false,false, true);
+      var.che_rad = radius;
+      var.diameter = diam;
+
+      //std::list <Point> randPoints, randPoints2;
+      //spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+      //settings.LMIatP = SP.getLMI().getA0();
+      //preproccess_spectrahedron(SP, p, var, settings, round_value, diam, rad, round);
+      //settings.LMIatP = SP.getLMI().getA0();
+      //p = Point(n);
+
+      spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
+      settings2.first = true;
+      settings2.epsilon = 0.0001;
+      //settings2.LMIatP = SP.getLMI().getA0();
+      Point cc(c);// = get_direction<RNGType, Point, NT>(n);
+
+      //SP.print();
+      //std::cout<<"n = ="<<n<<" c = "<<c<<std::endl;
+
+      //std::filebuf fb;
+      //fb.open("sdp_prob.txt", std::ios::out);
+      //std::ostream os(&fb);
+      //writeSDPAFormatFile<MT>(os, SP.getLMI(), c.get_coefficients());
+
+
+
+      NT T = var.diameter;
+
+      NT tred = 1.0 - 1.0/std::sqrt(NT(n));
+      std::vector<NT>retvec;
+
+
+      //if(max_iterations.isNotNull()) max_iter = Rcpp::as<unsigned int>(max_iterations);
+      //Rcpp::NumericVector retvec(NN);
+
+      if(hmc){
+
+
+          //std::cout << "HMC"<< std::endl;
+          //std::cout << optimal_solution<< std::endl;
+          //s/td::cout << err<< std::endl;
+          //std::cout << (std::abs(min_val - optimal_solution) / std::abs(optimal_solution)) << std::endl;
+
+          for (int i = 0; i < max_iter; ++i) {
+              for (int j = 0; j < walk_len; ++j) {
+                  HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
+              }
+              retvec.push_back(c.dot(p.getCoefficients()));
+              T = T * tred;
+
+          }
+      } else if(rdhr) {
+
+
+          //std::cout << "Hit and Run" << std::endl;
+
+          for (int i = 0; i < max_iter; ++i) {
+              for (int j = 0; j < walk_len; ++j) {
+                  hit_and_run_Boltzmann_spec(p, SP, var, cc, T);
+              }
+              retvec.push_back(c.dot(p.getCoefficients()));
+              T = T * tred;
+
+          }
       }
-	} else 
-    	std::cout 
-                 <<n<<" "
-                 //<<argv[]<<" "
-                 <<HP.num_of_hyperplanes()<<" "
-                 <<num_of_exp<<" "
-                 <<exactvol<<" "
-                 <<e<<" ["
-                 <<(1-e)*exactvol<<","
-                 <<(1+e)*exactvol<<"] "
-                 <<rnum<<" "
-                 <<walk_len<<" "
-                 <<average<<" ["
-                 <<min<<","
-                 <<max<<"] "
-                 <<std_dev<<" "
-                 <<(exactvol-average)/exactvol<<" "
-                 <<(max-min)/average<<" "
-                 <<sum_time/(i+1)<<" "
-                 <<sum_Chebtime/(i+1)<<" "
-                 //<<usage.vsize
-                 <<std::endl;
-	}
-	
-  if(linear_extensions)
-		   std::cout <<"Number of linear extensions= "<<vol*factorial(n)<<std::endl;
-  
-	/*
-  // EXACT COMPUTATION WITH POLYMAKE
-  /*
-	std::ofstream polymakefile;
-	polymakefile.open("volume.polymake");
-	//print_polymake_volfile(C,polymakefile);
-  std::cout<<P[0]<<std::endl;
-	print_polymake_volfile2(P,polymakefile);
-	system ("polymake volume.polymake");
-	std::cout<<std::endl;
-  */
-  //}
-  
+
+      std::cout<<"The values of the objective function in each iteration:\n"<<std::endl;
+      //std::cout<<", ";
+      for (int k = 0; k < max_iter; ++k) {
+          if (k>0) std::cout<<", ";
+          std::cout<<float(retvec[k]);
+      }
+      std::cout<<"\n";
+
+  }
+
+
   return 0;
 }

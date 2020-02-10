@@ -4,35 +4,34 @@
 
 #include "Eigen/Eigen"
 #include <chrono>
-#include "cartesian_geom/cartesian_kernel.h"
-#include "random.hpp"
-#include "random/uniform_int.hpp"
-#include "random/normal_distribution.hpp"
-#include "random/uniform_real_distribution.hpp"
-#include "convex_bodies/polytopes.h"
-#include "polytope_generators.h"
 #include <fstream>
-#include <string>
+#include <iostream>
+#include "cartesian_geom/cartesian_kernel.h"
+#include "boost/random.hpp"
+#include "boost/random/uniform_int.hpp"
+#include "boost/random/normal_distribution.hpp"
+#include "boost/random/uniform_real_distribution.hpp"
+#include "vars.h"
+#include "samplers.h"
+#include "rounding.h"
+#include "sample_only.h"
 #include "sdp_generator.h"
-#include "sdp_problem.h"
-
-typedef double NT;
-typedef Cartesian<NT> Kernel;
-typedef typename Kernel::Point Point;
-typedef optimization::sdp_problem<Point> sdp_problem;
-
-
+#include "spectrahedron.h"
 
 
 int main(const int argc, const char** argv) {
-    //Deafault values
+
     typedef double NT;
-    typedef Cartesian <NT> Kernel;
+    typedef Eigen::Matrix<NT, Eigen::Dynamic, 1> VT;
+    typedef Eigen::Matrix <NT, Eigen::Dynamic, Eigen::Dynamic> MT;
+    typedef Cartesian <NT, NT, VT> Kernel;
     typedef typename Kernel::Point Point;
     typedef boost::mt19937 RNGType;
+    typedef LMI <MT, VT> lmi;
+    typedef Spectrahedron <lmi, Point> spectaedro;
 
     bool file = false;
-    std::ofstream os;
+    //std::ofstream os;
 
     int n = 0, m = 0;
 
@@ -60,8 +59,8 @@ int main(const int argc, const char** argv) {
         }
 
         if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--file")) {
-            os.open(argv[++i]);
-            file = true;
+            //os.open(argv[++i]);
+            //file = true;
             correct = true;
         }
 
@@ -73,16 +72,28 @@ int main(const int argc, const char** argv) {
 
     }
 
-    if (n <= 0 || !file ||  m<=0) {
+    if (n <= 0 ||  m<=0) {
         std::cout<<"Wrong inputs, try -help"<<std::endl;
         exit(-1);
     }
 
-    sdp_problem sdp;
-    sdp = generateSDP<Point>(n, m);
+    spectaedro SP;//, SP2;
+    SP = generateSDP2<lmi, spectaedro, Point>(n, m);
 
-    sdp.writeSDPAFormatFile(os);
-    os.close();
+    Point c = get_direction<RNGType, Point, NT>(n);
+
+    std::filebuf fb;
+    std::string bar = "_";
+    std::string txt = ".txt";
+    fb.open("sdp_prob"+bar+std::to_string(n)+bar+std::to_string(m)+txt, std::ios::out);
+    std::ostream os(&fb);
+    writeSDPAFormatFile<MT>(os, SP.getLMI(), c.get_coefficients());
+
+    //sdp_problem sdp;
+   // sdp = generateSDP<Point>(n, m);
+
+    //sdp.writeSDPAFormatFile(os);
+    //os.close();
 
 
 

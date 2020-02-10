@@ -67,26 +67,26 @@ void get_next_zonoball(std::vector<ball> &BallSet,
     bool too_few;
     NT radmax = 0.0, rad, pnorm, ratio;
 
-    std::cout<<"size randPoints = "<<randPoints.size()<<std::endl;
+    //std::cout<<"size randPoints = "<<randPoints.size()<<std::endl;
     for (typename PointList::iterator rpit = randPoints.begin();  rpit!=randPoints.end(); ++rpit) {
         pnorm = (*rpit).squared_length();
         if (pnorm > radmax) radmax = pnorm;
     }
     ball Biter;
     radmax=std::sqrt(radmax);
-    std::cout<<"radmax = "<<radmax<<", n = "<<n<<std::endl;
+    //std::cout<<"radmax = "<<radmax<<", n = "<<n<<std::endl;
     ball BB(Point(n), radmax * radmax);
     int counter = 0;
     for (typename PointList::iterator rpit = randPoints.begin();  rpit!=randPoints.end(); ++rpit) {
         if (BB.is_in(*rpit) == -1) counter++;
     }
-    std::cout<<"counter = "<<counter<<std::endl;
+    //std::cout<<"counter = "<<counter<<std::endl;
 
     NT rmax = radmax, rmin = rad_min;
 
     while (true) {
         rad = 0.5 * (rad_min + radmax);
-        std::cout<<"rmax = "<<radmax<<", rad_med = "<<rad<<", rmin = "<<rad_min<<std::endl;
+        //std::cout<<"rmax = "<<radmax<<", rad_med = "<<rad<<", rmin = "<<rad_min<<std::endl;
         //throw "opa";
 
         Biter = ball(Point(n), rad * rad);
@@ -97,7 +97,7 @@ void get_next_zonoball(std::vector<ball> &BallSet,
             ratios.push_back(ratio);
             return;
         }
-        std::cout<<"ratio = "<<ratio<<", too_few = "<<too_few<<std::endl;
+        //std::cout<<"ratio = "<<ratio<<", too_few = "<<too_few<<std::endl;
 
         if (too_few) {
             rad_min = rad;
@@ -106,7 +106,7 @@ void get_next_zonoball(std::vector<ball> &BallSet,
         }
 
         if(radmax-rad_min<0.000000001) {
-            throw "opa";
+            //throw "opa";
             std::cout << "fail to find first ball in 30 iterations...repeat proccess" << std::endl;
             //std::cout<<"origin is in = "<<P.is_in(Point(n))<<std::endl;
             radmax = rmax;
@@ -126,7 +126,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
     bool print = true;
     std::list<Point> randPoints;
     Point p(n);
-    std::cout<<"rmax = "<<rmax<<" rad1 = "<<radius<<std::endl;
+    //std::cout<<"rmax = "<<rmax<<" rad1 = "<<radius<<std::endl;
     if(rmax>0.0) {
         for (int i = 0; i < 1200; ++i) {
             randPoints.push_back(get_point_in_Dsphere<RNGType, Point>(n, rmax));
@@ -143,7 +143,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
     }
     NT rad1 = radius;
 
-    std::cout<<"rad1 = "<<rad1<<" rmax = "<<rmax<<std::endl;
+    //std::cout<<"rad1 = "<<rad1<<" rmax = "<<rmax<<std::endl;
     while(!bisection_int) {
 
         randPoints.clear();
@@ -165,7 +165,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
     while(true) {
 
         rad_med = 0.5*(rad1+rmax);
-        std::cout << "rmax = " << rmax << " rad1 = " << rad1 << " rad_med = " << rad_med << std::endl;
+        //std::cout << "rmax = " << rmax << " rad1 = " << rad1 << " rad_med = " << rad_med << std::endl;
         randPoints.clear();
         too_few = false;
 
@@ -184,7 +184,7 @@ void get_first_ball(Polytope &P, ball &B0, NT &ratio, NT radius, NT lb, NT ub, N
         }
 
         if(rmax-rad1<0.000000001) {
-            std::cout << "fail to find first ball in 30 iterations...repeat proccess" << std::endl;
+            //std::cout << "fail to find first ball in 30 iterations...repeat proccess" << std::endl;
             //std::cout<<"origin is in = "<<P.is_in(Point(n))<<std::endl;
             rad1 = rad0;
             rmax = rad_m;
@@ -208,11 +208,11 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
     Point q(n);
     PolyBall zb_it;
     get_first_ball<RNGType>(P, B0, ratio, radius, lb, ub, alpha, rmax, var);
-    std::cout<<"C' computed... ratio_m = "<<ratio<<std::endl;
+   // std::cout<<"C' computed... ratio_m = "<<ratio<<std::endl;
     ratio0 = ratio;
     rand_point_generator_spec(P, q, Ntot, var.walk_steps, randPoints, var, settings);
     //var.TotSteps = var.TotSteps + NT(Ntot);
-    std::cout<<Ntot<<" points sampled from P"<<std::endl;
+    //std::cout<<Ntot<<" points sampled from P"<<std::endl;
 
     if (check_converg001<Point>(B0, randPoints, lb, ub, fail, ratio, nu, alpha, false, true)) {
         ratios.push_back(ratio);
@@ -233,7 +233,7 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
         zb_it.comp_diam(var.diameter);
         rand_point_generator_spec(zb_it, q, Ntot, var.walk_steps, randPoints,var, settings);
         //var.TotSteps = var.TotSteps + NT(Ntot);
-        std::cout<<"N points sampled from BP"<<std::endl;
+        //std::cout<<"N points sampled from BP"<<std::endl;
 
         if (check_converg001<Point>(B0, randPoints, lb, ub, fail, ratio, nu, alpha, false, true)) {
             ratios.push_back(ratio);
@@ -242,10 +242,10 @@ void get_sequence_of_polyballs(Polytope &P, std::vector<ball> &BallSet, std::vec
             if(print) std::cout<<"number of balls = "<<BallSet.size()+1<<std::endl;
             return;
         }
-        if(print) std::cout<<"ratio = "<<ratio<<std::endl;
-        if(print) std::cout<<"computing new ball.."<<std::endl;
+        //if(print) std::cout<<"ratio = "<<ratio<<std::endl;
+        //if(print) std::cout<<"computing new ball.."<<std::endl;
         get_next_zonoball<Point>(BallSet, randPoints, B0.radius(), ratios, lb, ub, alpha, nu);
-        if(print) std::cout<<"number of balls = "<<BallSet.size()+1<<std::endl;
+        //if(print) std::cout<<"number of balls = "<<BallSet.size()+1<<std::endl;
     }
 }
 
