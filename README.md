@@ -7,7 +7,7 @@
 Authors:  
 - [Apostolos Chalkis](https://tolischal.github.io) <tolis.chal at gmail.com>  
 - [Vissarion Fisikopoulos](https://vissarion.github.io) <vissarion.fisikopoulos at gmail.com>  
-- [Panagiotis Repouskos](https://panagiotisrep.github.io/) <cs1180004 at di.uoa.gr>  
+- [Panagiotis Repouskos](https://panagiotisrep.github.io/) < cs1180004 at di.uoa.gr >  
 - [Elias Tsigaridas](https://www-polsys.lip6.fr/~elias) <elias.tsigaridas at inria.fr>  
 
 ### - R Interface
