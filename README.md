@@ -2,7 +2,7 @@
 
 **VolEsti** is a C++ library for volume approximation and sampling of convex bodies with an *R* interface.  
 
-#### **This is a development branch that contains the supplementary code for paper "Sampling  the feasible set of SDP and volume approximation" submitted to ISSAC 2020.**   
+#### **This is a development branch that contains the supplementary code for paper "Sampling  the feasible sets of SDPs and volume approximation" submitted to ISSAC 2020.**   
 
 Authors:  
 - [Apostolos Chalkis](https://tolischal.github.io) <tolis.chal at gmail.com>  
@@ -77,9 +77,7 @@ library(volesti)
 
 The generated spectrahedron from the above `R` script ('sdp_prob_2_6.txt') can be found in both folders `/root/R-prog` and `/root/test`. The script generates the following figures:  
 
-<img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/uniform.png" width="300" height="300" />
-
-<img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/boltz.png" width="300" height="300" />  
+<img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/uniform.png" width="300" height="300" />  
 
 ### - C++ Interface
 ------------
