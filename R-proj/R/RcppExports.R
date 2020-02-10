@@ -7,13 +7,13 @@ generator_sdp <- function(nn = NULL, mm = NULL) {
 }
 
 #' @export
-sample_points <- function(file = NULL, N = NULL, walk_length = NULL, Temperature = NULL, random_walk = NULL) {
-    .Call(`_volesti_sample_points`, file, N, walk_length, Temperature, random_walk)
+sample_points <- function(file = NULL, distribution = NULL, N = NULL, walk_length = NULL, Temperature = NULL, random_walk = NULL) {
+    .Call(`_volesti_sample_points`, file, distribution, N, walk_length, Temperature, random_walk)
 }
 
 #' @export
-sdp_approx <- function(file = NULL, max_iterations = NULL, random_walk = NULL, walk_length = NULL) {
-    .Call(`_volesti_sdp_approx`, file, max_iterations, random_walk, walk_length)
+sdp_approx <- function(file = NULL, N = NULL, random_walk = NULL, walk_length = NULL) {
+    .Call(`_volesti_sdp_approx`, file, N, random_walk, walk_length)
 }
 
 #' The main function for volume approximation of a convex Polytope (H-polytope, V-polytope or a zonotope)

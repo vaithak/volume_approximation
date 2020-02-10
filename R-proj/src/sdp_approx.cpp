@@ -209,7 +209,7 @@ void loadSDPAFormatFile(std::istream &is, LMII &lmi, VT &objectiveFunction) {
 //' @export
 // [[Rcpp::export]]
 Rcpp::NumericVector sdp_approx(Rcpp::Nullable<Rcpp::CharacterVector> file = R_NilValue,
-               Rcpp::Nullable<int> max_iterations = R_NilValue,
+               Rcpp::Nullable<int> N = R_NilValue,
                              Rcpp::Nullable<int> random_walk = R_NilValue,
                              Rcpp::Nullable<unsigned int> walk_length = R_NilValue) {
 
@@ -288,7 +288,7 @@ Rcpp::NumericVector sdp_approx(Rcpp::Nullable<Rcpp::CharacterVector> file = R_Ni
 
     int walkL = 1, NN=50;
     if(walk_length.isNotNull()) walkL = Rcpp::as<unsigned int>(walk_length);
-    if(max_iterations.isNotNull()) NN = Rcpp::as<unsigned int>(max_iterations);
+    if(N.isNotNull()) NN = Rcpp::as<unsigned int>(N);
     //if(max_iterations.isNotNull()) max_iter = Rcpp::as<unsigned int>(max_iterations);
     Rcpp::NumericVector retvec(NN);
 

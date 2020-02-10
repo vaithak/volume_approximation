@@ -283,6 +283,7 @@ int main(const int argc, const char** argv)
          hmc = true,
             sample_only = false,
             sdp=false,
+            boltz = false,
          gaussian_sam = false;
     spectaedro SP;
 
@@ -305,45 +306,9 @@ int main(const int argc, const char** argv)
   for(int i=1;i<argc;++i){
       bool correct = false;
 
-      if(!strcmp(argv[i],"-h")||!strcmp(argv[i],"--help")){
-          std::cerr<<
-                      "Usage:\n"<<
-                      "-v, --verbose \n"<<
-                      "-rot : does only rotating to the polytope\n"<<
-                      "-ro, --round_only : does only rounding to the polytope\n"<<
-                      "-rand, --rand_only : only samples from the convex polytope\n"<<
-                      "-nsample : the number of points to sample in rand_olny mode\n"<<
-                      "-gaussian : sample with spherical gaussian target distribution in rand_only mode\n"<<
-                      "-variance : the variance of the spherical distribution in spherical mode (default 1)\n"<<
-                      "-f1, --file1 [filename_type_Ax<=b] [epsilon] [walk_length] [threads] [num_of_experiments], for H-polytopes\n"<<
-                      "-f2, --file2 [filename_type_V] [epsilon] [walk_length] [threads] [num_of_experiments], for V-polytopes\n"<<
-                      "-f3, --file3 [filename_type_G] [epsilon] [walk_length] [threads] [num_of_experiments], for Zonotopes\n"<<
-                      "-fle, --filele : counting linear extensions of a poset\n"<<
-                      //"-c, --cube [dimension] [epsilon] [walk length] [threads] [num_of_experiments]\n"<<
-                      "--exact : the exact volume\n"<<
-                      "--cube : input polytope is a cube\n"<<
-                      "-exact_zono : compute the exact volume of a zonotope\n"<<
-                      "-r, --round : enables rounding of the polytope as a preprocess\n"<<
-                      "-e, --error epsilon : the goal error of approximation\n"<<
-                      "-w, --walk_len [walk_len] : the random walk length (default 10)\n"<<
-                      "-exp [#exps] : number of experiments (default 1)\n"<<
-                      "-t, --threads #threads : the number of threads to be used\n"<<
-                      "-ΝΝ : use Nearest Neighbor search to compute the boundary oracles\n"<<
-                      "-birk_sym : use symmetry to compute more random points (only for Birkhoff polytopes)\n"<<
-                      "\n-cg : use the practical CG algo\n"<<
-                      "-w, --walk_len [walk_len] : the random walk length (default 1)\n"<<
-                      "-rdhr : use random directions HnR, default is coordinate directions HnR\n"
-                      "-e, --error epsilon : the goal error of approximation\n"<<
-                      "-bw : use ball walk for sampling\n"<<
-                      "-bwr : the radius of the ball walk (default r*chebychev_radius/sqrt(max(1.0, a_i)*dimension\n"<<
-                      "-Win : the size of the open window for the ratios convergence\n"<<
-                      "-C : a constant for the upper boud of variance/mean^2 in schedule annealing\n"
-                      "-N : the number of points to sample in each step of schedule annealing. Default value N = 500*C + dimension^2/2\n"<<
-                      "-frac : the fraction of the total error to spend in the first gaussian (default frac=0.1)\n"<<
-                      "-ratio : parameter of schedule annealing, larger ratio means larger steps in schedule annealing (default 1-1/dimension)\n"<<
-                      std::endl;
-          return 0;
-      }
+
+
+
 
       if(!strcmp(argv[i],"-sample")){
           sample_only = true;
@@ -388,6 +353,10 @@ int main(const int argc, const char** argv)
 
       if(!strcmp(argv[i],"-sdp")){
           sdp = true;
+          correct = true;
+      }
+      if(!strcmp(argv[i],"-boltz")){
+          boltz = true;
           correct = true;
       }
       //reading from file
@@ -473,54 +442,79 @@ int main(const int argc, const char** argv)
       var.che_rad = radius;
       var.diameter = diam;
 
-      if(billiard){
+      if(!boltz) {
+          if (billiard) {
 
 
-          spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
-          settings.LMIatP = SP.getLMI().getA0();
-          p = Point(n);
+              spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+              settings.LMIatP = SP.getLMI().getA0();
+              p = Point(n);
 
-          rand_point_generator_spec(SP, p,N, walk_len, randPoints, var, settings);
+              rand_point_generator_spec(SP, p, N, walk_len, randPoints, var, settings);
 
-      } else if (hmc) {
-          spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
-          settings2.first = true;
-          settings2.epsilon = 0.0001;
-          Point cc(c);
-          p = Point(n);
-          for (int i = 0; i < N; ++i) {
-              for (int j = 0; j < walk_len; ++j) {
-                  HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
+          } else if (hmc) {
+              spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
+              settings2.first = true;
+              settings2.epsilon = 0.0001;
+              Point cc(c);
+              p = Point(n);
+              for (int i = 0; i < N; ++i) {
+                  for (int j = 0; j < walk_len; ++j) {
+                      HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
+                  }
+                  randPoints.push_back(p);
               }
-              randPoints.push_back(p);
+          } else if (rdhr) {
+              p = Point(n);
+              for (int j = 0; j < N; ++j) {
+                  for (int k = 0; k < walk_len; ++k) {
+                      hit_and_run_spec(p, SP, var);
+                  }
+                  randPoints.push_back(p);
+              }
+          } else if (cdhr) {
+              Point v(n);
+              p = Point(n);
+              int rand_coord;
+              for (int j = 0; j < NN; ++j) {
+                  for (int k = 0; k < walk_len; ++k) {
+                      v = Point(n);
+                      rand_coord = uidist(rng);
+                      v.set_coord(rand_coord, 1.0);//(rand_coord) = 1.0;
+                      std::pair <NT, NT> dbpair = SP.boundaryOracle(p.get_coefficients(), v.get_coefficients());
+                      double min_plus = dbpair.first;
+                      double max_minus = dbpair.second;
+                      Point b1 = (min_plus * v) + p;
+                      Point b2 = (max_minus * v) + p;
+                      double lambda = urdist(rng);
+                      p = (lambda * b1);
+                      p = ((1 - lambda) * b2) + p;
+                  }
+                  randPoints.push_back(p);
+              }
           }
-      }else if (rdhr) {
-          p = Point(n);
-          for (int j = 0; j < N; ++j) {
-              for (int k = 0; k < walk_len; ++k) {
-                  hit_and_run_spec(p, SP, var);
+      } else {
+          if (hmc) {
+              spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
+              settings2.first = true;
+              settings2.epsilon = 0.0001;
+              Point cc(c);
+              p = Point(n);
+              for (int i = 0; i < N; ++i) {
+                  for (int j = 0; j < walk_len; ++j) {
+                      HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
+                  }
+                  randPoints.push_back(p);
               }
-              randPoints.push_back(p);
-          }
-      }else if (cdhr) {
-          Point v(n);
-          p = Point(n);
-          int rand_coord;
-          for (int j = 0; j < NN; ++j) {
-              for (int k = 0; k < walk_len; ++k) {
-                  v = Point(n);
-                  rand_coord = uidist(rng);
-                  v.set_coord(rand_coord, 1.0);//(rand_coord) = 1.0;
-                  std::pair<NT, NT> dbpair = SP.boundaryOracle(p.get_coefficients(), v.get_coefficients());
-                  double min_plus = dbpair.first;
-                  double max_minus = dbpair.second;
-                  Point b1 = (min_plus * v) + p;
-                  Point b2 = (max_minus * v) + p;
-                  double lambda = urdist(rng);
-                  p = (lambda * b1);
-                  p = ((1 - lambda) * b2) + p;
+          } else {
+              Point cc(c);
+              p = Point(n);
+              for (int i = 0; i < N; ++i) {
+                  for (int j = 0; j < walk_len; ++j) {
+                      hit_and_run_Boltzmann_spec(p, SP, var, cc, T);
+                  }
+                  randPoints.push_back(p);
               }
-              randPoints.push_back(p);
           }
       }
 

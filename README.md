@@ -22,13 +22,16 @@ library(volesti)
 
 
 ####  Run the code from `R`  
+
 * Generate a spectrahedron using the function `generator_sdp(n,m)`. Inputs:  
   - `n` is the dimension the spectrahedron lies.  
   - `m` is the dimension of the matrices in LMI.  
   - A txt file with name `sdp_prob_n_m.txt` will be created in folder `/root/R-prog`. You cas use this file (or any other with the same format) to give it as input in the following functions.  
+
 * Compute the volume of a spectrahedron using the function `volume()`. Inputs: 
   - `filename` is a string with the name of file in the format that the function `generator_sdp()` generates.  
   - The function calls the algorithm described in the paper to compute the volume of the input spectrahedron.  
+
 * Sample points from a spectrahedron using the function `sample_points()`. Inputs:  
   - `file` is a string with the name of file in the format that the function `generator_sdp()` generates.  
   - `distribution` is a string to declare from which distribution to sample from: a) `uniform` or b) `boltzmann`. The default value is `uniform`.  
@@ -37,6 +40,7 @@ library(volesti)
   - `Temperature` is a numeric input to declare the variance of the Boltzamann distribution. The default value is `1`.  
   - `random_walk` is a string to declare the random walk to use: a) `billiard` for billiard walk, b) `RDHR` for random directions Hit and Run, c) `CDHR` for coordinate directions Hit and Run or d) `HMC` for Hamiltonian Monte Carlo for reflections. The default value `billiard` for the uniform distribution and `HMC` for the Boltzmann distribution.  
 The function returns a `nxN` matrix that contains the sampled points columnwise.   
+
 * Approximate the solution of an sdp using the function `sdp_approx()`. Inputs:  
   - `filename` is a string with the name of file in the format that the function `generator_sdp()` generates.  
   - `N`is an integer to declare how many iterations to perform. The default value is `20`.  
@@ -49,9 +53,51 @@ The function returns a `N`-dimensional vector with the values of the objective f
 
 ####  Compile C++ sources and run tests 
 
-To compile the C++ code run in folder test:  
+To compile the C++ code run in folder `/root/test`:  
 ```
 cmake .  
 make  
 ```
+
+####  Run the code from terminal  
+
+* Generate a spectrahedron by running:
+`
+./generate -n <dimension> -m <matrix_dimension>
+`
+A txt file with name `sdp_prob_n_m.txt` will be created in folder `/root/test`. You cas use this file (or any other with the same format) to give it as input in the following function.  
+
+* Compute the volume of a spectrahedron by running:
+`
+./vol -file <filename>
+
+- Example:  
+`./generate -n 2 -m 6`
+`./vol -file sdp_prob_2_6.txt`
+The function prints the volume.  
+
+* Sample points from a spectrahedron by running:  
+`
+./vol -file <filename> -sample
+`
+  
+- The default settings are: `100` uniformly distributed points from the uniform distribution using billiard walk with walk length `1`.  
+- You can use the following flags: i) `-walk_length` <walk_length> to set the walk length of the random walk, ii) `-N` <number_of_points> to set the number of points to sample, iii) `-boltz` to sample from the Boltzmann distribution, iv) `-rdhr` to sample with random directions Hit and Run, `-cdhr` to sample with coordinate directions Hit and Run, `-hmc` to sample with Hamiltonian Monte Carlo with reflections, `-temperature` <variance_of_boltzmann_distribution> to set the variance of the Boltzmann distribution.
+
+- Example:  
+`./generate -n 2 -m 6`
+`./vol -file sdp_prob_2_6.txt -sample -N 200 -rdhr -boltz -temperature 0.5`
+The function prints the sampled points.  
+
+* Approximate the solution of an sdp by running:  
+`
+./vol -file <filename> -sdp
+`
+- The default settings are: `20` iterations are performed, with HMC sampling with walk length equal to `1`.
+- You can use the following flags: i) `-N` <number_of_iterations> to set the number of iterations, ii) `-walk_length` <walk_length> to set the walk length of the random walk iii) `-rdhr` to sample with random directions Hit and Run, `-hmc` to sample with Hamiltonian Monte Carlo with reflections.  
+
+- Example:  
+`./generate -n 10 -m 16`
+`./vol -file sdp_prob_10_16.txt -sdp -N 30 -hmc -walk_length 3`
+The function prints the values of the objective function of each iteration.
 

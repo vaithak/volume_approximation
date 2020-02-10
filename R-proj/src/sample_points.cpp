@@ -205,6 +205,7 @@ void loadSDPAFormatFile3(std::istream &is, LMII &lmi, VT &objectiveFunction) {
 //' @export
 // [[Rcpp::export]]
 Rcpp::NumericMatrix sample_points(Rcpp::Nullable<Rcpp::CharacterVector> file = R_NilValue,
+                                  Rcpp::Nullable<std::string> distribution = R_NilValue,
                                Rcpp::Nullable<unsigned int> N = R_NilValue,
                                Rcpp::Nullable<unsigned int> walk_length = R_NilValue,
                                   Rcpp::Nullable<double> Temperature = R_NilValue,
@@ -267,56 +268,76 @@ Rcpp::NumericMatrix sample_points(Rcpp::Nullable<Rcpp::CharacterVector> file = R
     var.che_rad = radius;
     var.diameter = diam;
 
-    if(!random_walk.isNotNull() || Rcpp::as<std::string>(random_walk).compare(std::string("Billiard"))==0){
+    if(!distribution.isNotNull() || Rcpp::as<std::string>(distribution).compare(std::string("uniform"))==0) {
+
+        if (!random_walk.isNotNull() || Rcpp::as<std::string>(random_walk).compare(std::string("Billiard")) == 0) {
 
 
-        spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
-        settings.LMIatP = SP.getLMI().getA0();
-        p = Point(n);
+            spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
+            settings.LMIatP = SP.getLMI().getA0();
+            p = Point(n);
 
-        rand_point_generator_spec(SP, p,NN, walkL, randPoints, var, settings);
+            rand_point_generator_spec(SP, p, NN, walkL, randPoints, var, settings);
 
-    } else if (Rcpp::as<std::string>(random_walk).compare(std::string("HMC"))==0) {
-        spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
-        settings2.first = true;
-        settings2.epsilon = 0.0001;
-        Point cc(c);
-        p = Point(n);
-        for (int i = 0; i < NN; ++i) {
-            for (int j = 0; j < walkL; ++j) {
-                HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
+        } else if (Rcpp::as<std::string>(random_walk).compare(std::string("RDHR")) == 0) {
+            p = Point(n);
+            for (int j = 0; j < NN; ++j) {
+                for (int k = 0; k < walkL; ++k) {
+                    hit_and_run_spec(p, SP, var);
+                }
+                randPoints.push_back(p);
             }
-            randPoints.push_back(p);
-        }
-    }else if (Rcpp::as<std::string>(random_walk).compare(std::string("RDHR"))==0) {
-        p = Point(n);
-        for (int j = 0; j < NN; ++j) {
-            for (int k = 0; k < walkL; ++k) {
-                hit_and_run_spec(p, SP, var);
+        } else if (Rcpp::as<std::string>(random_walk).compare(std::string("CDHR")) == 0) {
+            Point v(n);
+            p = Point(n);
+            int rand_coord;
+            for (int j = 0; j < NN; ++j) {
+                for (int k = 0; k < walkL; ++k) {
+                    v = Point(n);
+                    rand_coord = uidist(rng);
+                    v.set_coord(rand_coord, 1.0);//(rand_coord) = 1.0;
+                    std::pair <NT, NT> dbpair = SP.boundaryOracle(p.get_coefficients(), v.get_coefficients());
+                    double min_plus = dbpair.first;
+                    double max_minus = dbpair.second;
+                    Point b1 = (min_plus * v) + p;
+                    Point b2 = (max_minus * v) + p;
+                    double lambda = urdist(rng);
+                    p = (lambda * b1);
+                    p = ((1 - lambda) * b2) + p;
+                }
+                randPoints.push_back(p);
             }
-            randPoints.push_back(p);
         }
-    }else if (Rcpp::as<std::string>(random_walk).compare(std::string("CDHR"))==0) {
-        Point v(n);
-        p = Point(n);
-        int rand_coord;
-        for (int j = 0; j < NN; ++j) {
-            for (int k = 0; k < walkL; ++k) {
-                v = Point(n);
-                rand_coord = uidist(rng);
-                v.set_coord(rand_coord, 1.0);//(rand_coord) = 1.0;
-                std::pair<NT, NT> dbpair = SP.boundaryOracle(p.get_coefficients(), v.get_coefficients());
-                double min_plus = dbpair.first;
-                double max_minus = dbpair.second;
-                Point b1 = (min_plus * v) + p;
-                Point b2 = (max_minus * v) + p;
-                double lambda = urdist(rng);
-                p = (lambda * b1);
-                p = ((1 - lambda) * b2) + p;
+    } else if (Rcpp::as<std::string>(distribution).compare(std::string("boltzmann"))==0){
+
+        if (Rcpp::as<std::string>(random_walk).compare(std::string("HMC")) == 0) {
+            spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
+            settings2.first = true;
+            settings2.epsilon = 0.0001;
+            Point cc(c);
+            p = Point(n);
+            for (int i = 0; i < NN; ++i) {
+                for (int j = 0; j < walkL; ++j) {
+                    HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
+                }
+                randPoints.push_back(p);
             }
-            randPoints.push_back(p);
+        } else if(Rcpp::as<std::string>(random_walk).compare(std::string("RDHR")) == 0){
+            Point cc(c);
+            p = Point(n);
+            for (int i = 0; i < NN; ++i) {
+                for (int j = 0; j < walkL; ++j) {
+                    hit_and_run_Boltzmann_spec(p, SP, var, cc, T);
+                }
+                randPoints.push_back(p);
+            }
+        }else {
+            throw Rcpp::exception("Wrong input!");
         }
+    } else {
+        throw Rcpp::exception("Wrong input!");
     }
+
 
     MT RetMat(n, NN);
     unsigned int jj = 0;
