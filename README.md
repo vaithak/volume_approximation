@@ -75,9 +75,8 @@ library(volesti)
 [1] 4.649064
 ```
 
-The generated spectrahedron from the above `R` script ('sdp_prob_2_6.txt') can be found in both folders `/root/R-prog` and `/root/test`. The scripts generates the following figures:  
-<img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/uniform.png?raw=true" width="300" height="300" />  
-
+The generated spectrahedron from the above `R` script ('sdp_prob_2_6.txt') can be found in both folders `/root/R-prog` and `/root/test`. The script generates the following figures:  
+<img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/uniform.png?raw=true" width="300" height="300" />
 <img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/boltz.png?raw=true" width="300" height="300" />  
 
 ### - C++ Interface
