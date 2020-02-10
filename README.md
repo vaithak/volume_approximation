@@ -63,7 +63,7 @@ library(volesti)
 
 > generator_sdp(2,6)
 
->uniform_points = sample_points('sdp_prob_2_6.txt', N=2000)
+> uniform_points = sample_points('sdp_prob_2_6.txt', N=2000)
 > ggplot(data.frame(x = uniform_points[1,], y = uniform_points[2,]),aes(x=x, y=y)) +
        geom_point(shape=20,color="red") +labs(x =" ", y = " ")+xlim(-1.6, 1.8)+ylim(-2,2.3)
  
