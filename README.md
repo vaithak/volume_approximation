@@ -70,7 +70,7 @@ A txt file with name `sdp_prob_n_m.txt` will be created in folder `/root/test`. 
 * Compute the volume of a spectrahedron by running:  
 `
 ./vol -file <filename>
-
+`
 - Example:  
 `./generate -n 2 -m 6`  
 `./vol -file sdp_prob_2_6.txt`  
@@ -82,7 +82,7 @@ The function prints the volume.
 `
   
 - The default settings are: `100` uniformly distributed points from the uniform distribution using billiard walk with walk length `1`.  
-- You can use the following flags: i) `-walk_length` <walk_length> to set the walk length of the random walk, ii) `-N` <number_of_points> to set the number of points to sample, iii) `-boltz` to sample from the Boltzmann distribution, iv) `-rdhr` to sample with random directions Hit and Run, `-cdhr` to sample with coordinate directions Hit and Run, `-hmc` to sample with Hamiltonian Monte Carlo with reflections, `-temperature` <variance_of_boltzmann_distribution> to set the variance of the Boltzmann distribution.  
+- You can use the following flags: i) `-walk_length <walk_length>` to set the walk length of the random walk, ii) `-N <number_of_points>` to set the number of points to sample, iii) `-boltz` to sample from the Boltzmann distribution, iv) `-rdhr` to sample with random directions Hit and Run, `-cdhr` to sample with coordinate directions Hit and Run, `-hmc` to sample with Hamiltonian Monte Carlo with reflections, `-temperature` <variance_of_boltzmann_distribution> to set the variance of the Boltzmann distribution.  
 
 - Example:  
 `./generate -n 2 -m 6`  
