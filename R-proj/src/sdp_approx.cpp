@@ -208,8 +208,7 @@ void loadSDPAFormatFile(std::istream &is, LMII &lmi, VT &objectiveFunction) {
 
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
-               Rcpp::Nullable<int> mm = R_NilValue,
+Rcpp::NumericVector sdp_approx(Rcpp::Nullable<Rcpp::CharacterVector> file = R_NilValue,
                Rcpp::Nullable<int> max_iterations = R_NilValue,
                              Rcpp::Nullable<int> random_walk = R_NilValue,
                              Rcpp::Nullable<unsigned int> walk_length = R_NilValue) {
@@ -225,13 +224,13 @@ Rcpp::NumericVector sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
 
     std::ifstream inp;
 
-    std::string bar = "_";
-    std::string txt = ".txt";
-    std::string sdp = "sdp_prob"+bar+std::to_string(Rcpp::as<int>(d))+bar+std::to_string(Rcpp::as<int>(mm))+txt;
+    //std::string bar = "_";
+    //std::string txt = ".txt";
+    //std::string sdp = "sdp_prob"+bar+std::to_string(Rcpp::as<int>(d))+bar+std::to_string(Rcpp::as<int>(mm))+txt;
 
-    std::cout<<"reading... "<<sdp<<std::endl;
+    //std::cout<<"reading... "<<sdp<<std::endl;
 
-    inp.open(sdp,std::ifstream::in);
+    inp.open(Rcpp::as<std::string>(file),std::ifstream::in);
     lmi Slmi;
     VT c;
     loadSDPAFormatFile<MT>(inp, Slmi, c);
@@ -310,10 +309,10 @@ Rcpp::NumericVector sdp_approx(Rcpp::Nullable<int> d = R_NilValue,
             T = T * tred;
 
         }
-    } else if(Rcpp::as<std::string>(random_walk).compare(std::string("RDHR"))) {
+    } else if(Rcpp::as<std::string>(random_walk).compare(std::string("RDHR"))==0) {
 
 
-        std::cout << "Hit and Run" << std::endl;
+        //std::cout << "Hit and Run" << std::endl;
 
         for (int i = 0; i < NN; ++i) {
             for (int j = 0; j < walkL; ++j) {

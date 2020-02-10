@@ -27,7 +27,7 @@
 
 //' @export
 // [[Rcpp::export]]
-double generator_sdp(Rcpp::Nullable<int> nn = R_NilValue,
+void generator_sdp(Rcpp::Nullable<int> nn = R_NilValue,
                              Rcpp::Nullable<int> mm = R_NilValue) {
 
     typedef double NT;
@@ -80,6 +80,6 @@ double generator_sdp(Rcpp::Nullable<int> nn = R_NilValue,
     std::ostream os(&fb);
     writeSDPAFormatFile<MT>(os, SP.getLMI(), c.get_coefficients());
 
-    return 1.0;
+    return;
 }
 

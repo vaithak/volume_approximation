@@ -256,8 +256,7 @@ void loadSDPAFormatFile2(std::istream &is, LMII &lmi, VT &objectiveFunction) {
 //' vol = volume(Z, WalkType = "RDHR", walk_step = 5)
 //' @export
 // [[Rcpp::export]]
-double volume (Rcpp::Nullable<int> d = R_NilValue,
-               Rcpp::Nullable<int> num = R_NilValue,
+double volume (Rcpp::Nullable<Rcpp::CharacterVector> file = R_NilValue,
                Rcpp::Nullable<unsigned int> walk_step = R_NilValue,
                Rcpp::Nullable<double> error = R_NilValue,
                Rcpp::Nullable<Rcpp::NumericVector> InnerBall = R_NilValue,
@@ -278,13 +277,13 @@ double volume (Rcpp::Nullable<int> d = R_NilValue,
 
     std::ifstream inp;
 
-    std::string bar = "_";
-    std::string txt = ".txt";
-    std::string sdp = "sdp_prob"+bar+std::to_string(Rcpp::as<int>(d))+bar+std::to_string(Rcpp::as<int>(num))+txt;
+    //std::string bar = "_";
+    //std::string txt = ".txt";
+    //std::string sdp = "sdp_prob"+bar+std::to_string(Rcpp::as<int>(d))+bar+std::to_string(Rcpp::as<int>(num))+txt;
 
-    std::cout<<"reading... "<<sdp<<std::endl;
+    //std::cout<<"reading... "<<sdp<<std::endl;
 
-    inp.open(sdp,std::ifstream::in);
+    inp.open(Rcpp::as<std::string>(file),std::ifstream::in);
     lmi Slmi;
     VT c;
     loadSDPAFormatFile2<MT>(inp, Slmi, c);

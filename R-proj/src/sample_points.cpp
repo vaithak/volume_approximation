@@ -204,8 +204,7 @@ void loadSDPAFormatFile3(std::istream &is, LMII &lmi, VT &objectiveFunction) {
 
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericMatrix sample_points(Rcpp::Nullable<int> nn = R_NilValue,
-                               Rcpp::Nullable<int> mm = R_NilValue,
+Rcpp::NumericMatrix sample_points(Rcpp::Nullable<Rcpp::CharacterVector> file = R_NilValue,
                                Rcpp::Nullable<unsigned int> N = R_NilValue,
                                Rcpp::Nullable<unsigned int> walk_length = R_NilValue,
                                   Rcpp::Nullable<double> Temperature = R_NilValue,
@@ -224,13 +223,13 @@ Rcpp::NumericMatrix sample_points(Rcpp::Nullable<int> nn = R_NilValue,
 
     std::ifstream inp;
 
-    std::string bar = "_";
-    std::string txt = ".txt";
-    std::string sdp = "sdp_prob"+bar+std::to_string(Rcpp::as<int>(nn))+bar+std::to_string(Rcpp::as<int>(mm))+txt;
+    //std::string bar = "_";
+    //std::string txt = ".txt";
+    //std::string sdp = "sdp_prob"+bar+std::to_string(Rcpp::as<int>(nn))+bar+std::to_string(Rcpp::as<int>(mm))+txt;
 
-    std::cout<<"reading... "<<sdp<<std::endl;
+    //std::cout<<"reading... "<<std::endl;
 
-    inp.open(sdp,std::ifstream::in);
+    inp.open(Rcpp::as<std::string>(file),std::ifstream::in);
     lmi Slmi;
     VT c;
     loadSDPAFormatFile3<MT>(inp, Slmi, c);
@@ -263,7 +262,7 @@ Rcpp::NumericMatrix sample_points(Rcpp::Nullable<int> nn = R_NilValue,
     std::pair<Point,NT> InnerB;
     InnerB.first = p;
 
-    vars<NT, RNGType> var(0,Rcpp::as<int>(nn), 1, 1,0.0,0.1,0,0.0,0, radius,diam,rng,urdist,urdist1,
+    vars<NT, RNGType> var(0,n, 1, 1,0.0,0.1,0,0.0,0, radius,diam,rng,urdist,urdist1,
                           -1.0,true,false,round,false,false,false,false,false, true);
     var.che_rad = radius;
     var.diameter = diam;
@@ -277,26 +276,29 @@ Rcpp::NumericMatrix sample_points(Rcpp::Nullable<int> nn = R_NilValue,
 
         rand_point_generator_spec(SP, p,NN, walkL, randPoints, var, settings);
 
-    } else if (Rcpp::as<std::string>(random_walk).compare(std::string("HMC"))) {
+    } else if (Rcpp::as<std::string>(random_walk).compare(std::string("HMC"))==0) {
         spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
         settings2.first = true;
         settings2.epsilon = 0.0001;
         Point cc(c);
+        p = Point(n);
         for (int i = 0; i < NN; ++i) {
             for (int j = 0; j < walkL; ++j) {
                 HMC_boltzmann_reflections(SP, p, diam, var, cc, T, settings2);
             }
             randPoints.push_back(p);
         }
-    }else if (Rcpp::as<std::string>(random_walk).compare(std::string("RDHR"))) {
+    }else if (Rcpp::as<std::string>(random_walk).compare(std::string("RDHR"))==0) {
+        p = Point(n);
         for (int j = 0; j < NN; ++j) {
             for (int k = 0; k < walkL; ++k) {
                 hit_and_run_spec(p, SP, var);
             }
             randPoints.push_back(p);
         }
-    }else if (Rcpp::as<std::string>(random_walk).compare(std::string("CDHR"))) {
+    }else if (Rcpp::as<std::string>(random_walk).compare(std::string("CDHR"))==0) {
         Point v(n);
+        p = Point(n);
         int rand_coord;
         for (int j = 0; j < NN; ++j) {
             for (int k = 0; k < walkL; ++k) {
