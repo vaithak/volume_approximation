@@ -314,9 +314,9 @@ double volume (Rcpp::Nullable<Rcpp::CharacterVector> file = R_NilValue,
     spectaedro::BoundaryOracleBilliardSettings settings(SP.getLMI().getMatricesDim());
     settings.LMIatP = SP.getLMI().getA0();
 
-    std::cout<<"\ninitializations ok.."<<std::endl;
+    //std::cout<<"\ninitializations ok.."<<std::endl;
     preproccess_spectrahedron(SP, p, var, settings, round_value, diam_spec, rad, round);
-    std::cout<<"preproccessing ok.."<<std::endl;
+    //std::cout<<"preproccessing ok.."<<std::endl;
     InnerB.second = rad;
 
     vol_spec = volesti_ball_ann(SP, var, var_ban, settings, InnerB, nballs2, false);

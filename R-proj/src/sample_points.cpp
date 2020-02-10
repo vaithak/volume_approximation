@@ -310,7 +310,7 @@ Rcpp::NumericMatrix sample_points(Rcpp::Nullable<Rcpp::CharacterVector> file = R
         }
     } else if (Rcpp::as<std::string>(distribution).compare(std::string("boltzmann"))==0){
 
-        if (Rcpp::as<std::string>(random_walk).compare(std::string("HMC")) == 0) {
+        if (!random_walk.isNotNull() || Rcpp::as<std::string>(random_walk).compare(std::string("HMC")) == 0) {
             spectaedro::BoundaryOracleBoltzmannHMCSettings settings2;
             settings2.first = true;
             settings2.epsilon = 0.0001;

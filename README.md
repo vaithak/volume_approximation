@@ -1,7 +1,14 @@
 ## Volume computation and sampling
 
 **VolEsti** is a C++ library for volume approximation and sampling of convex bodies with an *R* interface.  
+
 #### **This is a development branch that contains the supplementary code for paper "Sampling  the feasible set of SDP and volume approximation" submitted to ISSAC 2020.**   
+
+Authors:  
+- [Apostolos Chalkis](https://tolischal.github.io) <tolis.chal at gmail.com>  
+- [Vissarion Fisikopoulos](https://vissarion.github.io) <vissarion.fisikopoulos at gmail.com>  
+- [Panagiotis Repouskos](https://panagiotisrep.github.io/) <cs1180004@di.uoa.gr>  
+- [Elias Tsigaridas](https://www-polsys.lip6.fr/~elias) <elias.tsigaridas at inria.fr>  
 
 ### - R Interface
 ------------
@@ -47,6 +54,31 @@ The function returns a `nxN` matrix that contains the sampled points columnwise.
   - `random_walk` is a string to declare the random walk to use: a) `HMC` for Hamiltonian Monte Carlo for reflections or b) `RDHR` for random directions Hit and Run. The default value is `HMC`.  
   - `walk_length` is an integer to declare the walk length of the random walk. The default value is `1`.  
 The function returns a `N`-dimensional vector with the values of the objective function of each iteration.  
+
+* Example:  
+
+```{r}
+library(ggplot2)
+library(volesti)
+
+> generator_sdp(2,6)
+
+>uniform_points = sample_points('sdp_prob_2_6.txt', N=2000)
+> ggplot(data.frame(x = uniform_points[1,], y = uniform_points[2,]),aes(x=x, y=y)) +
+       geom_point(shape=20,color="red") +labs(x =" ", y = " ")+xlim(-1.6, 1.8)+ylim(-2,2.3)
+ 
+> boltz_points = sample_points('sdp_prob_2_6.txt', N=2000, distribution = 'boltzmann', Temperature = 2)
+> ggplot(data.frame(x = boltz_points[1,], y = boltz_points[2,]),aes(x=x, y=y)) +
+   geom_point(shape=20,color="red") +labs(x =" ", y = " ")+xlim(-1.6, 1.8)+ylim(-2,2.3)
+
+> volume('sdp_prob_2_6.txt')
+[1] 4.649064
+```
+
+The generated spectrahedron from the above `R` script ('sdp_prob_2_6.txt') can be found in both folders `/root/R-prog` and `/root/test`. The scripts generates the following figures:  
+<img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/uniform.png?raw=true" width="300" height="300" />  
+
+<img src="https://github.com/GeomScale/volume_approximation/tree/issac20/R-proj/inst/boltz.png?raw=true" width="300" height="300" />  
 
 ### - C++ Interface
 ------------

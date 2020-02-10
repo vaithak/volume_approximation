@@ -1185,13 +1185,17 @@ void HMC_boltzmann_reflections(Spectrahedron &spectrahedron, Point &p, NT che_ra
 
     typedef typename Parameters::RNGType RNGType;
     typedef typename Spectrahedron::MT MT;
+    typedef typename Spectrahedron::VT VT;
     unsigned int n = spectrahedron.getLMI().getDim();
     RNGType &rng = var.rng;
     boost::random::uniform_real_distribution<> urdist(0, 1);
     NT T = urdist(rng) * che_rad;//0.7*che_rad;
     Point v(n);
-    int it = 0;
+    int it = 0, max_it = n;
     NT lambda_max = 0.0;
+    VT pVT = p.get_coefficients();
+
+    if(n==2 || n==3) max_it=10*n;
 
 //    Point p1 = p;
 
@@ -1253,7 +1257,7 @@ void HMC_boltzmann_reflections(Spectrahedron &spectrahedron, Point &p, NT che_ra
 //        }
 
 
-        while (it < n) {
+        while (it < max_it) {
 //            Point oo(pVT);
             typedef std::numeric_limits<double> dbl;
 
@@ -1308,7 +1312,7 @@ void HMC_boltzmann_reflections(Spectrahedron &spectrahedron, Point &p, NT che_ra
 //    }
 //    exit(0);
 //    std::cout <<"end\n";
-//    p = Point(pVT);
+      //p = Point(pVT);
 }
 
 
