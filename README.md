@@ -61,19 +61,19 @@ make
 
 ####  Run the code from terminal  
 
-* Generate a spectrahedron by running:
+* Generate a spectrahedron by running:  
 `
 ./generate -n <dimension> -m <matrix_dimension>
 `
 A txt file with name `sdp_prob_n_m.txt` will be created in folder `/root/test`. You cas use this file (or any other with the same format) to give it as input in the following function.  
 
-* Compute the volume of a spectrahedron by running:
+* Compute the volume of a spectrahedron by running:  
 `
 ./vol -file <filename>
 
 - Example:  
-`./generate -n 2 -m 6`
-`./vol -file sdp_prob_2_6.txt`
+`./generate -n 2 -m 6`  
+`./vol -file sdp_prob_2_6.txt`  
 The function prints the volume.  
 
 * Sample points from a spectrahedron by running:  
@@ -82,22 +82,22 @@ The function prints the volume.
 `
   
 - The default settings are: `100` uniformly distributed points from the uniform distribution using billiard walk with walk length `1`.  
-- You can use the following flags: i) `-walk_length` <walk_length> to set the walk length of the random walk, ii) `-N` <number_of_points> to set the number of points to sample, iii) `-boltz` to sample from the Boltzmann distribution, iv) `-rdhr` to sample with random directions Hit and Run, `-cdhr` to sample with coordinate directions Hit and Run, `-hmc` to sample with Hamiltonian Monte Carlo with reflections, `-temperature` <variance_of_boltzmann_distribution> to set the variance of the Boltzmann distribution.
+- You can use the following flags: i) `-walk_length` <walk_length> to set the walk length of the random walk, ii) `-N` <number_of_points> to set the number of points to sample, iii) `-boltz` to sample from the Boltzmann distribution, iv) `-rdhr` to sample with random directions Hit and Run, `-cdhr` to sample with coordinate directions Hit and Run, `-hmc` to sample with Hamiltonian Monte Carlo with reflections, `-temperature` <variance_of_boltzmann_distribution> to set the variance of the Boltzmann distribution.  
 
 - Example:  
-`./generate -n 2 -m 6`
-`./vol -file sdp_prob_2_6.txt -sample -N 200 -rdhr -boltz -temperature 0.5`
+`./generate -n 2 -m 6`  
+`./vol -file sdp_prob_2_6.txt -sample -N 200 -rdhr -boltz -temperature 0.5`  
 The function prints the sampled points.  
 
 * Approximate the solution of an sdp by running:  
 `
 ./vol -file <filename> -sdp
 `
-- The default settings are: `20` iterations are performed, with HMC sampling with walk length equal to `1`.
+- The default settings are: `20` iterations are performed, with HMC sampling with walk length equal to `1`.  
 - You can use the following flags: i) `-N` <number_of_iterations> to set the number of iterations, ii) `-walk_length` <walk_length> to set the walk length of the random walk iii) `-rdhr` to sample with random directions Hit and Run, `-hmc` to sample with Hamiltonian Monte Carlo with reflections.  
 
 - Example:  
-`./generate -n 10 -m 16`
-`./vol -file sdp_prob_10_16.txt -sdp -N 30 -hmc -walk_length 3`
+`./generate -n 10 -m 16`  
+`./vol -file sdp_prob_10_16.txt -sdp -N 30 -hmc -walk_length 3`  
 The function prints the values of the objective function of each iteration.
 
