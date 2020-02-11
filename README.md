@@ -36,15 +36,12 @@ library(volesti)
   - A txt file with name `sdp_prob_n_m.txt` will be created in folder `/root/R-prog`. You cas use this file (or any other with the same format) to give it as input in the following functions.  
 
 * Compute the volume of a spectrahedron using the function `volume()`.  
-
 **Inputs**:  
   - `filename` is a string with the name of file in the format that the function `generator_sdp()` generates.  
-
 **Output**:  
   - The function compute the volume of the input spectrahedron by calling the algorithm described in the paper.  
 
 * Sample points from a spectrahedron using the function `sample_points()`.  
-
 **Inputs**:  
   - `file` is a string with the name of file in the format that the function `generator_sdp()` generates.  
   - `distribution` is a string to declare from which distribution to sample from: a) `uniform` or b) `boltzmann`. The default value is `uniform`.  
@@ -52,18 +49,15 @@ library(volesti)
   - `walk_length` is an integer to declare the walk length of the random walk. The default value is `1`.  
   - `Temperature` is a numeric input to declare the variance of the Boltzamann distribution. The default value is `1`.  
   - `random_walk` is a string to declare the random walk to use: a) `billiard` for billiard walk, b) `RDHR` for random directions Hit and Run, c) `CDHR` for coordinate directions Hit and Run or d) `HMC` for Hamiltonian Monte Carlo for reflections. The default value `billiard` for the uniform distribution and `HMC` for the Boltzmann distribution.  
-
 **Output**:  
-- A `nxN` matrix that contains the sampled points columnwise.  
+  - A `nxN` matrix that contains the sampled points columnwise.  
 
 * Approximate the solution of an sdp using the function `sdp_approx()`.  
-
 **Inputs**:  
   - `filename` is a string with the name of file in the format that the function `generator_sdp()` generates.  
   - `N`is an integer to declare how many iterations to perform. The default value is `20`.  
   - `random_walk` is a string to declare the random walk to use: a) `HMC` for Hamiltonian Monte Carlo for reflections or b) `RDHR` for random directions Hit and Run. The default value is `HMC`.  
   - `walk_length` is an integer to declare the walk length of the random walk. The default value is `1`.  
-
 **Output**:  
 - A `N`-dimensional vector with the values of the objective function of each iteration.  
 
