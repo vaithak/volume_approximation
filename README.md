@@ -31,7 +31,7 @@ library(volesti)
 ####  Run the code from `R`  
 
 * Generate a spectrahedron using the function `generator_sdp(n,m)`.  
-  - **Inputs**:  
+  - **Input**:  
     1. `n` is the dimension the spectrahedron lies.  
     2. `m` is the dimension of the matrices in LMI.  
   - **Output**: A txt file with name `sdp_prob_n_m.txt` will be created in folder `/root/R-prog`. You cas use this file (or                 any other with the same format) to give it as input in the following functions.  
@@ -41,7 +41,7 @@ library(volesti)
     1. `filename` is a string with the name of file in the format that the function `generator_sdp()` generates.  
   - **Output**: The function compute the volume of the input spectrahedron by calling the algorithm described in the paper.  
 * Sample points from a spectrahedron using the function `sample_points()`.  
-  - **Inputs**:  
+  - **Input**:  
     1. `file` is a string with the name of file in the format that the function `generator_sdp()` generates.  
     2. `distribution` is a string to declare from which distribution to sample from: a) `uniform` or b) `boltzmann`. The default value is `uniform`.  
     3. `N` is an integer to declare how many points to sample from the spectrahedron. The default value is `100`.  
@@ -51,7 +51,7 @@ library(volesti)
   - **Output**: A `nxN` matrix that contains the sampled points columnwise.  
 
 * Approximate the solution of an sdp using the function `sdp_approx()`.  
-  - **Inputs**:  
+  - **Input**:  
     1. `filename` is a string with the name of file in the format that the function `generator_sdp()` generates.  
     2. `N`is an integer to declare how many iterations to perform. The default value is `20`.  
     3. `random_walk` is a string to declare the random walk to use: a) `HMC` for Hamiltonian Monte Carlo for reflections or b) `RDHR` for random directions Hit and Run. The default value is `HMC`.  
