@@ -53,13 +53,13 @@ library(volesti)
   - A `nxN` matrix that contains the sampled points columnwise.  
 
 * Approximate the solution of an sdp using the function `sdp_approx()`.  
-**Inputs**:  
+  **Inputs**:  
   - `filename` is a string with the name of file in the format that the function `generator_sdp()` generates.  
   - `N`is an integer to declare how many iterations to perform. The default value is `20`.  
   - `random_walk` is a string to declare the random walk to use: a) `HMC` for Hamiltonian Monte Carlo for reflections or b) `RDHR` for random directions Hit and Run. The default value is `HMC`.  
   - `walk_length` is an integer to declare the walk length of the random walk. The default value is `1`.  
-**Output**:  
-- A `N`-dimensional vector with the values of the objective function of each iteration.  
+  **Output**:  
+  - A `N`-dimensional vector with the values of the objective function of each iteration.  
 
 * Example:  
 
