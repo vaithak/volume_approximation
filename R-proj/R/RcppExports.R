@@ -154,6 +154,44 @@ poly_gen <- function(kind_gen, Vpoly_gen, Zono_gen, dim_gen, m_gen, seed = NULL)
     .Call(`_volesti_poly_gen`, kind_gen, Vpoly_gen, Zono_gen, dim_gen, m_gen, seed)
 }
 
+#' Solving a LP problem using Randomized algorithms.
+#'
+#' Currently, only 2 algorithms are implemented - Randomized Cutting plane and Simulated Annealing.
+#'
+#' @param P. A convex H Polytope, it is the feasible region of the LP problem (\eqn{Ax<=b}).
+#' @param obj. A vector for the coefficients of the objective function (\eqn{min c^{T} x}).
+#' @param bounds optional. A list that contains the bound of the variables (the default is complete Real space), as follows:
+#' \itemize{
+#' \item{\code{indices}}{A vector containing the variable indices(0 indexed) for which the bounds have to be set.}
+#' \item{\code{lower}}{A vector containing the value of lower bounds for all the variables specified in indices.}
+#' \item{\code{upper}}{A vector containing the value of upper bounds for all the variables specified in indices.}
+#' }
+#' @param algo Optional. An unsigned integer that declares which algorithm, as follows:
+#' \itemize{
+#' \item{\code{0} }{ Use the Randomized Cutting Plane algorithm (RCP).}
+#' \item{\code{1} }{ Use the Simulated Annealing algorithm (SIM_ANN).}
+#' }
+#' @param verbose Optional. A boolean parameter for printing out the LP program formed.
+#'
+#' @references \cite{ Dabbene, Fabrizio, Pavel S. Shcherbakov, and Boris T. Polyak.,
+#' \dQuote{ A randomized cutting plane method with probabilistic geometric convergence,} \emph{SIAM Journal on Optimization 20.6,} (2010): 3185-3207.},
+#' @references \cite{Adam Tauman Kalai, Santosh Vempala,
+#' \dQuote{Simulated Annealing for Convex Optimization,} \emph{Mathematics of Operations Research Vol. 31, No. 2,} 2006.}
+#'
+#'
+#' @return A list containing the value of the objective function and value of all variables.
+#' @examples
+#' # computing Chebychev ball for a H-polytope (3d cube)
+#' P <- gen_cube(3, 'H')
+#' row_norm <- sqrt(rowSums((P$A)^2))
+#' P$A <- cbind(P$A, row_norm)
+#' var_bounds <- list("indices"=c(3), "lower"=c(0), "upper"=c(1000))
+#' randomized_lp_solver(P, obj=c(0,0,0,-1), bounds=var_bounds, algo=1, verbose=TRUE)
+#' @export
+randomized_lp_solver <- function(P, obj, bounds = NULL, algo = 0L, verbose = FALSE) {
+    .Call(`_volesti_randomized_lp_solver`, P, obj, bounds, algo, verbose)
+}
+
 #'  An internal Rccp function for the random rotation of a convex polytope
 #'
 #' @param P A convex polytope (H-, V-polytope or a zonotope).
