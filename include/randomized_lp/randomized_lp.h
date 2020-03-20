@@ -12,6 +12,7 @@
 #include "hpolytope.h"
 #include "interior_point.h"
 #include "samplers.h" 
+#include "helpers.h"
 
 template <typename Parameters, typename Point>
 class Randomized_LP{
@@ -29,6 +30,41 @@ private:
     std::vector<NT> variable_values;
     std::unordered_map<unsigned int, NT> lower_bounds;
     std::unordered_map<unsigned int, NT> upper_bounds;
+
+    // add bounds into matrix and return the new matrices
+    void add_bounds_to_matrix(MT &A_new, VT &b_new){
+        A_new = A;
+        b_new = b;
+
+        unsigned int count = A.rows();
+    
+        A_new.conservativeResize(A_new.rows() + lower_bounds.size() + upper_bounds.size(), Eigen::NoChange);
+        b_new.conservativeResize(b_new.size() + lower_bounds.size() + upper_bounds.size());
+
+        // Add lower bounds as constraints         
+        for (typename std::unordered_map<unsigned int, NT>::iterator itr = lower_bounds.begin(); itr != lower_bounds.end(); itr++, count++) { 
+            unsigned int var_num = itr->first;
+            NT bnd_val = itr->second;
+            VT temp(A_new.cols());
+            for(int i=0; i<temp.size(); i++)
+                temp(i)=0;
+            temp(var_num) = -1;
+            A_new.row(count) = temp.array();
+            b_new(count) = -bnd_val;
+        }
+        
+        // Add upper bounds as constraints
+        for (typename std::unordered_map<unsigned int, NT>::iterator itr = upper_bounds.begin(); itr != upper_bounds.end(); itr++, count++) { 
+            unsigned int var_num = itr->first;
+            NT bnd_val = itr->second;
+            VT temp(A_new.cols());
+            for(int i=0; i<temp.size(); i++)
+                temp(i)=0;
+            temp(var_num) = 1;
+            A_new.row(count) = temp.array();
+            b_new(count) = bnd_val;
+        }
+    }
 
 public:
     Randomized_LP(int num_constraints, int num_vars) : A(num_constraints, num_vars), b(num_constraints){
@@ -146,26 +182,25 @@ public:
     }
 
     // get objective function value
-    NT get_objective_value(){
+    NT get_objective_value() const{
         return objective_value;
     }
 
     // get value of variables after it's solved
-    std::vector<NT> get_variables(){
+    std::vector<NT> get_variables() const{
         return variable_values;
     }
 
     // solve the model created
-    bool solve(const Parameters &var, const std::string method="RCP"){
+    bool solve(Parameters &var, const std::string method="RCP"){
         if(solved == true)
             return true;
 
         bool res = false;
         if(method == "RCP")
             res = solve_by_cutting_plane(var);
-        // else if(method == "SIM_ANN"){
-        //     solve_simulated_annealing(var);
-        // }
+        else if(method == "SIM_ANN")
+            res = solve_by_simulated_annealing(var);
         else
             return false;
 
@@ -173,45 +208,18 @@ public:
         return res;
     } 
 
-    bool solve_by_cutting_plane(const Parameters &var){
-        MT A_curr = A;
-        VT b_curr = b;
 
-        unsigned int count = A.rows();
-    
-        A_curr.conservativeResize(A_curr.rows() + lower_bounds.size() + upper_bounds.size(), Eigen::NoChange);
-        b_curr.conservativeResize(b_curr.size() + lower_bounds.size() + upper_bounds.size());
-
-        // Add lower bounds as constraints         
-        for (typename std::unordered_map<unsigned int, NT>::iterator itr = lower_bounds.begin(); itr != lower_bounds.end(); itr++, count++) { 
-            unsigned int var_num = itr->first;
-            NT bnd_val = itr->second;
-            VT temp(A_curr.cols());
-            for(int i=0; i<temp.size(); i++)
-                temp(i)=0;
-            temp(var_num) = -1;
-            A_curr.row(count) = temp.array();
-            b_curr(count) = -bnd_val;
-        }
-        
-        // Add upper bounds as constraints
-        for (typename std::unordered_map<unsigned int, NT>::iterator itr = upper_bounds.begin(); itr != upper_bounds.end(); itr++, count++) { 
-            unsigned int var_num = itr->first;
-            NT bnd_val = itr->second;
-            VT temp(A_curr.cols());
-            for(int i=0; i<temp.size(); i++)
-                temp(i)=0;
-            temp(var_num) = 1;
-            A_curr.row(count) = temp.array();
-            b_curr(count) = bnd_val;
-        }
+    bool solve_by_cutting_plane(Parameters &var){
+        MT A_curr;
+        VT b_curr;
+        add_bounds_to_matrix(A_curr, b_curr);
 
         // Using objective fxn as a point for dot product
         std::vector<NT> tmp1(obj.data(), obj.data() + obj.size());
         Point obj_c_pt(obj.rows(), tmp1);
 
-        unsigned int max_iterations = 100;
         double threshold = 0.001;
+        unsigned int max_iterations = (8*var.n)*log(10/threshold);
         double N_k_init = 2.2*log(1/threshold) + 1.1 + 5;
         NT min_val = std::numeric_limits<NT>::max();
         Point p;
@@ -219,14 +227,14 @@ public:
         
         A_curr.conservativeResize(A_curr.rows()+1, Eigen::NoChange);
         b_curr.conservativeResize(b_curr.rows()+1, Eigen::NoChange);
-        count = A_curr.rows()-1;
+        unsigned int count = A_curr.rows()-1;
         A_curr.row(count) = obj.array();
         b_curr(count) = 0;
         pol.init(A_curr.cols(), A_curr, b_curr);
         
         for (unsigned int k = 0; k < max_iterations; k++){
             // unsigned int N_k = (N_k_init + 0.505*log(k+1));
-            unsigned int N_k = 16;
+            unsigned int N_k = 22;
 
             pol.set_vec(b_curr);
             // pol.print();
@@ -237,7 +245,7 @@ public:
             // std::cout<<"Var n: "<<var.n<<", k: "<<k<<std::endl;
 
             std::vector<Point> randPoints; //ds for storing rand points
-            rand_point_generator(pol, p, N_k, 1000, randPoints, var);
+            rand_point_generator(pol, p, N_k, var.walk_steps, randPoints, var);
             for (typename std::vector<Point>::iterator it = randPoints.begin(); it != randPoints.end(); ++it){
                 // evaluating <obj,pt>
                 NT val = obj_c_pt.dot(*it);
@@ -257,9 +265,78 @@ public:
         return true;
     }
 
-    // bool solve_by_simulated_annealing(const Parameters &var){
+    bool solve_by_simulated_annealing(Parameters &var){
+        MT A_curr;
+        VT b_curr;
+        add_bounds_to_matrix(A_curr, b_curr);
+        HPolytope<Point> pol;
+        pol.init(A_curr.cols(), A_curr, b_curr);
+        Point X_init = getInteriorPoint<Point, NT>(pol);
+        
+        MT covariance_matrix;
+        MT cholesky_covariance_matrix;
 
-    // }
+        // Algo specific parameters
+        NT obj_norm = obj.norm();       // |c|
+        VT obj_normalized = obj/obj.norm(); // making |c| = 1
+        std::pair <NT, NT> r_R = calculate_max_min_dist<NT>(pol, X_init);
+        NT r = r_R.first;
+        NT R = r_R.second;
+        unsigned int I = sqrt(var.n)*log(5*R*var.n); // number of phases
+        NT temperature = R; // starting temperature
+        NT n = A_curr.cols();   // dimension
+        NT temperature_decay_factor = 1 - 1/sqrt(n);
+        unsigned int N = var.m; // number of samples for rounding
+        var.ball_walk = false;
+        var.rdhr_walk = true;
+
+        // initiate Covariance Matrix V0
+        std::vector<Point> randPoints;
+        rand_point_generator(pol, X_init, N, var.walk_steps, randPoints, var);
+        
+        calculate_covariance_matrix<NT>(randPoints, covariance_matrix);
+        Eigen::LLT<MT> lltOfA(covariance_matrix); // compute the Cholesky decomposition of covariance_matrix
+        cholesky_covariance_matrix = lltOfA.matrixL();
+
+        // Using objective fxn as a point for dot product
+        std::vector<NT> tmp1(obj.data(), obj.data() + obj.size());
+        Point obj_c_pt(obj.rows(), tmp1);
+
+        // intialize variables
+        Point prev_X = X_init;
+
+        std::vector<Point> temp_points(N);
+        for(int i=1; i<=I; ++i){
+            // Update temperature
+            temperature = temperature*temperature_decay_factor;
+
+            // Calculate Xi
+            Point curr_X = prev_X;
+            for(int k=0; k<var.walk_steps; ++k){
+                curr_X = boltzmann_hit_and_run_annealing(curr_X, pol, obj_c_pt, temperature, cholesky_covariance_matrix, var);
+            }
+
+            // updating covariance matrix
+            for(int j=0; j<N; j++){
+                Point temp_pt = prev_X;
+                for(int k=0; k<var.walk_steps; ++k){
+                    temp_pt = boltzmann_hit_and_run_annealing(temp_pt, pol, obj_c_pt, temperature, cholesky_covariance_matrix, var);
+                }
+                temp_points[j] = temp_pt;
+            }
+            calculate_covariance_matrix<NT>(temp_points, covariance_matrix);
+            Eigen::LLT<MT> lltOfA(covariance_matrix); // compute the Cholesky decomposition of covariance_matrix
+            cholesky_covariance_matrix = lltOfA.matrixL();
+
+            // Updating for next iteration
+            prev_X = curr_X;
+        }
+
+        variable_values = prev_X.get_coeffs();
+        objective_value = obj_c_pt.dot(prev_X);
+
+        return true;
+    }
 };
 
 #endif

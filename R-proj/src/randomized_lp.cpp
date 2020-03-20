@@ -52,10 +52,10 @@ Rcpp::List randomized_lp_solver(Rcpp::Reference P, Rcpp::NumericVector obj, Rcpp
 
     // Setup the parameters
     unsigned int n = P.field("dimension");
-    unsigned int walk_len=10 + n/10;
+    unsigned int walk_len=10 + n;
     int nexp=1, n_threads=1;
-    NT e=1, err=0.0000000001;
-    int rnum = 100; // will be configured by the algorithm
+    NT e=1, err=0.00000001;
+    int rnum = 5*n;
     RNGType rng(std::time(0));
     boost::normal_distribution<> rdist(0,1);
     boost::random::uniform_real_distribution<>(urdist);

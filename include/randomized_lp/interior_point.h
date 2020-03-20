@@ -31,7 +31,7 @@ double backtrackingLineSearch(NT s, const VT &grad, const NT &s_grad, const MT &
         eval = x - step_length * grad;
         eval_s = s - step_length*s_grad;
 
-        if(step_length < 1e-19)
+        if(step_length < pow((1e-3), A.cols()))
             return step_length;
     }
 
@@ -45,7 +45,7 @@ void gradientDescent(const MT &A, const VT &b, NT &s, VT &x, const double m) {
     VT grad(dim);
     NT s_grad;
 
-    int max_iter = 1000;
+    int max_iter = 500;
     do {
         // compute the gradient
         for (int i = 0; i < denominators.size(); i++) {
@@ -77,7 +77,7 @@ void gradientDescent(const MT &A, const VT &b, NT &s, VT &x, const double m) {
 
     if(max_iter <= 0){
         #ifdef VOLESTI_DEBUG
-        // std::cout<<"Max iterations exceeded in gradient descent\n";
+        std::cout<<"Max iterations exceeded in gradient descent\n";
         #endif
     }
 }

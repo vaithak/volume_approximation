@@ -19,17 +19,17 @@ void cheb_test(Polytope &P, NT expected, NT tolerance=0.0001)
 
     // Setup the parameters
     int n = P.dimension();
-    int walk_len=10 + n/10;
+    int walk_len=10 + n;
     int nexp=1, n_threads=1;
     NT e=1, err=0.0000000001;
-    int rnum = std::pow(e,-2) * 400 * n * std::log(n);
+    int rnum = 5*n;
     RNGType rng(std::time(0));
     boost::normal_distribution<> rdist(0,1);
     boost::random::uniform_real_distribution<>(urdist);
     boost::random::uniform_real_distribution<> urdist1(-1,1);
 
     vars<NT,RNGType> var(rnum,n,walk_len,n_threads,err,e,0,0,0,0,0.0,rng,
-             urdist,urdist1,-1.0,false,false,false,false,false,false,false, true,false);
+             urdist,urdist1,-1.0,false,false,false,false,false,false,false,true,false);
 
     //Compute chebychev ball//
     //std::cout << "\n--- Testing Chebchev ball computation of " << f << std::endl;
@@ -39,7 +39,7 @@ void cheb_test(Polytope &P, NT expected, NT tolerance=0.0001)
     typedef Eigen::Matrix<NT,Eigen::Dynamic,1> VT;
     MT A = P.get_mat();
     VT b = P.get_vec();
-    std::pair<Point,NT> CheBall = LPChebychevBall<NT, Point>(A, b, var);
+    std::pair<Point,NT> CheBall = LPChebychevBall<NT, Point>(A, b, var, method="SIM_ANN");
     double tstop1 = (double)clock()/(double)CLOCKS_PER_SEC;
 
 
@@ -66,11 +66,6 @@ void call_test_cube() {
     std::cout << "\n--- Testing Chebchev ball computation of H-cube20" << std::endl;
     P = gen_cube<Hpolytope>(20, false);
     cheb_test<NT, RNGType>(P, 1.0, 0.05);
-
-    std::cout << "\n--- Testing Chebchev ball computation of H-cube30" << std::endl;
-    P = gen_cube<Hpolytope>(30, false);
-    cheb_test<NT, RNGType>(P, 1.0, 0.05);
-
 }
 
 template <typename NT>
@@ -96,11 +91,6 @@ void call_test_simplex() {
     std::cout << "\n--- Testing Chebchev ball computation of H-simplex40" << std::endl;
     P = gen_simplex<Hpolytope>(40, false);
     cheb_test<NT, RNGType>(P, 0.0215868, 0.05);
-
-    std::cout << "\n--- Testing Chebchev ball computation of H-simplex50" << std::endl;
-    P = gen_simplex<Hpolytope>(50, false);
-    cheb_test<NT, RNGType>(P, 0.017522, 0.05);
-
 }
 
 TEST_CASE("rcp_cheb_cube") {
